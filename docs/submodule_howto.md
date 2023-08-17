@@ -1,6 +1,5 @@
 # How to work with submodules
 Packages imported from other Gitlab repositories are called submodules. They correspond to a reference to a specific commit.  
-In this project, `libergo-eyetracker` is a submodule containing the Python package `camerasensor`.  
 
 
 To install a repository containing one or multiple submodules:

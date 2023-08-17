@@ -6,7 +6,7 @@
 """
 
 import sklearn.tree as tree
-from LR_AI.model.machineLearning import Regressor
+from lr_ai.model.machineLearning import Regressor
 
 
 availableModels = ["tweedie", "bayesLinear", "SGD", "SVM", "KNN", "tree", "forest", "AdaBoost", "GBoost"]

@@ -334,13 +334,13 @@ if __name__ == "__main__":
     #!!! TEST SCRIPT !!!
     TEST = "NN"
     if TEST == "NN": 
-        import LR_AI.features.preprocessing as pr
-        import LR_AI.features.preprocessing as imgpr
-        from LR_AI.model.neural_network_architectures.FCNN import *
-        from LR_AI.model.neural_network_architectures.CNN import *
-        from LR_AI.model.neural_network_architectures.temporal import *        
-        from LR_AI.config.NN_config import *
-        from LR_AI.config.data_config import *
+        import lr_ai.features.preprocessing as pr
+        import lr_ai.features.preprocessing as imgpr
+        from lr_ai.model.neural_network_architectures.FCNN import *
+        from lr_ai.model.neural_network_architectures.CNN import *
+        from lr_ai.model.neural_network_architectures.temporal import *        
+        from lr_ai.config.NN_config import *
+        from lr_ai.config.data_config import *
         
         
 

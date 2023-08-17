@@ -9,10 +9,10 @@ import numpy as np
 import torch.nn as nn
 import torch
 
-from LR_AI.features.preprocessing import load_metadata, getTrackerSet
-from LR_AI.visualisation.display_mouse_prediction import draw_point_on_frame
+from lr_ai.features.preprocessing import load_metadata, getTrackerSet
+from lr_ai.visualisation.display_mouse_prediction import draw_point_on_frame
 
-def tracker_no_AI(folder_path, config_file='LR_AI/config/trackerConfig.json'):
+def tracker_no_AI(folder_path, config_file='lr_ai/config/trackerConfig.json'):
     """This method applies an eyetracker (without AI) to an input video.
     The predictions are evaluated with the same score as our AI models.
 
@@ -32,7 +32,7 @@ def tracker_no_AI(folder_path, config_file='LR_AI/config/trackerConfig.json'):
     
     Args:
         folder_path (string): path to the folder with test videos
-        config_file (str, optional): Path to the tracker config file. Default to 'LR_AI/config/trackerConfig.json'
+        config_file (str, optional): Path to the tracker config file. Default to 'lr_ai/config/trackerConfig.json'
     """
     video_paths = [os.path.join(folder_path, vid) for vid in os.listdir(folder_path) 
                    if vid.endswith(".avi")]
@@ -98,6 +98,6 @@ def tracker_no_AI(folder_path, config_file='LR_AI/config/trackerConfig.json'):
 
 
 if __name__ == "__main__":
-    config_path = 'LR_AI/config/trackerConfig.json'
+    config_path = 'lr_ai/config/trackerConfig.json'
     test_path = r"data/debug"
     tracker_no_AI(test_path, config_path)

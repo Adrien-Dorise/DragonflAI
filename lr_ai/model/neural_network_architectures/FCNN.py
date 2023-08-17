@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from LR_AI.model.neuralNetwork import NeuralNetwork
+from lr_ai.model.neuralNetwork import NeuralNetwork
 
 
 

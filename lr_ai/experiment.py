@@ -5,13 +5,13 @@ Created: March 2023
 Last updated: Adrien Dorise - August 2023
 '''
 
-import LR_AI.features.preprocessing as pr
-import LR_AI.features.image_preprocessing as imgpr
-import LR_AI.visualisation.display_mouse_prediction as visu
-import LR_AI.visualisation.draw_tracker as draw_tracker
-import LR_AI.visualisation.evaluate_tracker as eval
-from LR_AI.model.machineLearning import Regressor
-from LR_AI.model.neural_network_architectures.lookAtScreen import lookAtScreenDistillation, LookAtScreenClassification
+import lr_ai.features.preprocessing as pr
+import lr_ai.features.image_preprocessing as imgpr
+import lr_ai.visualisation.display_mouse_prediction as visu
+import lr_ai.visualisation.draw_tracker as draw_tracker
+import lr_ai.visualisation.evaluate_tracker as eval
+from lr_ai.model.machineLearning import Regressor
+from lr_ai.model.neural_network_architectures.lookAtScreen import lookAtScreenDistillation, LookAtScreenClassification
 
 import pickle
 from sklearn.preprocessing import MinMaxScaler

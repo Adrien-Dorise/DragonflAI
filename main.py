@@ -9,7 +9,7 @@
 
 if __name__ == "__main__":
     
-    from lr_ai.config.ML_config import *
+	from lr_ai.config.ML_config import *
 	from lr_ai.config.NN_config import *
 	from lr_ai.config.data_config import *
 	from lr_ai.experiment import *

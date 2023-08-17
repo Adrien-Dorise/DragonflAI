@@ -13,8 +13,5 @@ setup(name='lr_ai',
                 'lr_ai.model', 
                 'lr_ai.visualisation', 
                 'lr_ai.model.neural_network_architectures',
-                'tracker.camerasensor',
-                'camerasensor'
-                ],
-      package_dir={"camerasensor":"tracker/camerasensor"},
+                ]
      )

@@ -15,8 +15,8 @@ from torchvision import transforms
 
 from imgaug import augmenters as iaa
 
-from LR_AI.features.tracker_toolbox import crop_face, crop_eyes, get_detector, get_landmarks
-from LR_AI.features.preprocessing import getTrackerSet, load_metadata
+from lr_ai.features.tracker_toolbox import crop_face, crop_eyes, get_detector, get_landmarks
+from lr_ai.features.preprocessing import getTrackerSet, load_metadata
 
 
 # ----------------

@@ -16,8 +16,8 @@ import sklearn.utils as utils
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from tracker.camerasensor import MeshFaceDetector
-from LR_AI.features.tracker_toolbox import select_points
+from camerasensor import MeshFaceDetector
+from lr_ai.features.tracker_toolbox import select_points
 
 
 class Dataset(Dataset):

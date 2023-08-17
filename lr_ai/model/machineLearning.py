@@ -233,11 +233,11 @@ class Regressor():
 
 if __name__ == "__main__":
     #!!! Parameters !!!
-    from LR_AI.config.ML_config import *
+    from lr_ai.config.ML_config import *
     import os
-    from LR_AI.features.tracker_toolbox import select_points
-    import LR_AI.features.preprocessing as pr
-    from LR_AI.config.ML_config import parametersModel
+    from lr_ai.features.tracker_toolbox import select_points
+    import lr_ai.features.preprocessing as pr
+    from lr_ai.config.ML_config import parametersModel
 
     trainPath = r"data/split1/train/"
     validPath = r"data/split1/val/"

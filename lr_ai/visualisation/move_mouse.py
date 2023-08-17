@@ -14,11 +14,11 @@ import torch
 from torchvision import transforms
 import pyautogui
 
-from LR_AI.model.neuralNetwork import FaceTrackerNN
-from LR_AI.model.machineLearning import Regressor
-from LR_AI.features.preprocessing import load_metadata, getTrackerSet
-from LR_AI.visualisation.display_mouse_prediction import draw_point_on_frame
-from LR_AI.features.tracker_toolbox import crop_face, get_landmarks, get_detector
+from lr_ai.model.neuralNetwork import FaceTrackerNN
+from lr_ai.model.machineLearning import Regressor
+from lr_ai.features.preprocessing import load_metadata, getTrackerSet
+from lr_ai.visualisation.display_mouse_prediction import draw_point_on_frame
+from lr_ai.features.tracker_toolbox import crop_face, get_landmarks, get_detector
 
 im2ten_tf = transforms.Compose([
             transforms.ToTensor(),  # convert from [0, 255] to [0.0, 0.1]

@@ -5,7 +5,7 @@
  Last updated: Adrien Dorise - August 2023
 """
 
-from LR_AI.experiment import InputType, ParamType
+from lr_ai.experiment import InputType, ParamType
 from sklearn.preprocessing import MinMaxScaler
 
 

@@ -8,7 +8,7 @@
 import cv2
 import numpy as np
 
-from tracker.camerasensor import MeshFaceDetector
+from camerasensor import MeshFaceDetector
 
 # -----------------------------------------------------
 # Sets of points of interest

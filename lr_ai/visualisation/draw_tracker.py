@@ -4,7 +4,7 @@ import os
 import numpy as np
 import cv2
 
-from LR_AI.features.tracker_toolbox import get_landmarks, get_detector, V1, V2
+from lr_ai.features.tracker_toolbox import get_landmarks, get_detector, V1, V2
 
 def parse_arguments():
     args = argparse.ArgumentParser("Draw tracker points on an image or video.")

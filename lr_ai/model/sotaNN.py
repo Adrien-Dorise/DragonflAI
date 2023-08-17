@@ -18,8 +18,8 @@ from torchvision.models import resnet18, ResNet18_Weights, resnet101, ResNet101_
 from torch.nn.functional import one_hot
 from torch.nn import Linear
 
-from LR_AI.model.neuralNetwork import NeuralNetwork
-from LR_AI.model.coatnet import coatnet_0
+from lr_ai.model.neuralNetwork import NeuralNetwork
+from lr_ai.model.coatnet import coatnet_0
 
 class ResNet18NN(NeuralNetwork):
     """

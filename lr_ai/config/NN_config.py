@@ -8,11 +8,11 @@
 import torch
 import torch.nn.functional as F
 
-from LR_AI.experiment import ParamType
-import LR_AI.model.neural_network_architectures.lookAtScreen as classi
-import LR_AI.model.neural_network_architectures.CNN as CNN
-import LR_AI.model.neural_network_architectures.FCNN as FCNN
-import LR_AI.model.neural_network_architectures.temporal as temporal
+from lr_ai.experiment import ParamType
+import lr_ai.model.neural_network_architectures.lookAtScreen as classi
+import lr_ai.model.neural_network_architectures.CNN as CNN
+import lr_ai.model.neural_network_architectures.FCNN as FCNN
+import lr_ai.model.neural_network_architectures.temporal as temporal
 
 
 param = ParamType.MOVE_CURSOR
