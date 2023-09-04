@@ -1,6 +1,7 @@
 # LR_AI
 
-
+# Used repo
+https://github.com/leelabcnbc/cnnvis-pytorch
 
 ## Getting started
 
