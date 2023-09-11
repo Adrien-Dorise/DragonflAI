@@ -126,7 +126,7 @@ torchinfo==1.7.2
 torchmetrics==0.11.4
 torchsummary==1.5.1
 torchview==0.2.6
-torchvis @ git+https://github.com/Adrien-Dorise/cnnvis-pytorch
+cnnvis @ git+https://github.com/Adrien-Dorise/cnnvis-pytorch@master 
 torchvision==0.14.1
 tqdm==4.65.0
 typing_extensions==4.5.0
