@@ -13,7 +13,7 @@ from torchvision import transforms
 from torch import nn
 import torch.nn.functional as F
 from torchmetrics import Accuracy
-from cnnvis import util
+from torchvis import util
 from torch.autograd import Variable
 
 from pytorch_grad_cam import GradCAM
