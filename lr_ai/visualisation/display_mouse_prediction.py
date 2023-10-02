@@ -265,6 +265,6 @@ if __name__ == "__main__":
         
         model.loadModel("models/full_dataset/FCNN_tracker_v2/model1/epoch500_1.json")
         
-        loss, (target, outputs) = model.predict(data_set)
+        loss, (inputs, targets, outputs) = model.predict(data_set)
         
-        compare_target_prediction(data_path,target,outputs)
+        compare_target_prediction(data_path,targets,outputs)

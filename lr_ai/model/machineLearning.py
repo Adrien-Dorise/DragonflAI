@@ -157,13 +157,15 @@ class Regressor():
 
         Returns:
             mean_loss (float): the average error for all batch of data.
+            output (list): Model prediction on the test set
+            [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
 
         inputs,target = self.extract_set(test_set)
         # forward
         outputs = self.forward(inputs)
         score = self.metric(target,outputs)
-        return score, [target.detach().numpy(), outputs]
+        return score, outputs, [inputs.detach().numpy(), target.detach().numpy()]
     
     
     def forward(self, data):

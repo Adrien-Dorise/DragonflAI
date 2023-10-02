@@ -185,7 +185,7 @@ class NeuralNetwork(nn.Module):
                 self.saveModel(f"models/tmp/epoch{epoch}")
             
             if valid_set is not None and epoch%1==0: #Calculate validation loss
-                loss,_ = self.predict(valid_set, crit=criterion)
+                loss,_,_ = self.predict(valid_set, crit=criterion)
                 losses_val.append(loss)
                 print(f"\nValidation error is {loss}")
 
@@ -210,28 +210,31 @@ class NeuralNetwork(nn.Module):
 
         Returns:
             mean_loss (float): the average error for all batch of data.
+            output (list): Model prediction on the test set
+            [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
         self.architecture.eval()
         progress_bar = tqdm(enumerate(test_set), total=len(test_set))
         use_gpu = torch.cuda.is_available()
         with torch.no_grad():
-            outputs, targets, test_loss = [],[],[]
+            inputs, outputs, targets, test_loss = [],[],[],[]
             for i, data in progress_bar:
                 # get the inputs; data is a list of [inputs, target]
-                inputs = data[0].to(self.device, non_blocking=True)
+                features = data[0].to(self.device, non_blocking=True)
                 target = data[1]
 
                 # forward
                 #with amp.autocast(enabled=use_gpu):
-                output = self.forward(inputs)
+                output = self.forward(features)
 
+                inputs.extend(np.array(features.cpu().detach(), dtype=np.float32))
                 targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
                 outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
                 loss = crit(output.cpu().float(), target)
                 test_loss.append(loss.item())
 
         mean_loss = np.mean(test_loss)
-        return mean_loss, [np.asarray(targets), np.asarray(outputs)]
+        return mean_loss, np.asarray(outputs), [np.asarray(inputs), np.asarray(targets)]
     
             
         

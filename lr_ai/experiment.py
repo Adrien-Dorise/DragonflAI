@@ -173,7 +173,7 @@ class Experiment():
 
         elif(self.model_type == ModelType.MACHINE_LEARNING):
             self.model.fit(train_set)
-            result, out = self.model.predict(val_set)
+            result, out, dataset = self.model.predict(val_set)
             print(f"Test loss for <{self.model}> is: {result}")
 
         self.model.saveModel(f"models/tmp/model")
@@ -189,7 +189,7 @@ class Experiment():
         elif(self.input_type == InputType.IMAGE):
             test_set = imgpr.img_loader(self.test_path, isTrain=False, shuffle=False, batch_size=self.batch_size,crop=self.crop, num_workers=self.nb_workers, temporal=self.is_temporal_model,sequence_length=self.sequence_length,classification=self.classification)
 
-        score, out = self.model.predict(test_set,self.criterion)
+        score, out, dataset = self.model.predict(test_set,self.criterion)
         if(self.model_type == ModelType.NEURAL_NETWORK_LOOKATSCREEN or self.model_type == ModelType.NEURAL_NETWORK_LOOKATSCREEN_DISTILLATION):
             self.model.confusion_mat(test_set)
 
@@ -223,7 +223,7 @@ class Experiment():
             visu_set = imgpr.img_loader(self.visu_path, isTrain=False, shuffle=False, crop=self.crop, num_workers=self.nb_workers, temporal=self.is_temporal_model,sequence_length=self.sequence_length)
             crop = self.crop
 
-        _, (target, outputs) = self.model.predict(visu_set)
+        _, outputs, (inputs, targets) = self.model.predict(visu_set)
         
 
         if(self.input_type == InputType.IMAGE and not black_background):
@@ -239,7 +239,7 @@ class Experiment():
             visu_choice = visu.Background.TRACKER_BLACK
             tracker_version = self.tracker_version
 
-        visu.compare_target_prediction(self.visu_path,target, outputs, save, visu_choice, tracker_version, crop)    
+        visu.compare_target_prediction(self.visu_path,targets, outputs, save, visu_choice, tracker_version, crop)    
 
     def visualise_lookAtScreen(self, option = LookAtScreenOptions.OFFLINE_GRADCAM):
         """Visualisation of the "look at screen" feature. This feature determines if a user is currently looking directly at the screen, based on a classification model.
