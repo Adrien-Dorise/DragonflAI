@@ -9,6 +9,11 @@ import os
 import json 
 import numpy as np 
 
+import torch
+from torch.utils.data import Dataset
+from torch.utils.data import DataLoader
+
+
 class DatasetFolder(object):
     
     def __init__(self, root):
@@ -86,8 +91,9 @@ class DatasetFolder(object):
             id = idx
                 
         # init empty list 
-        x = []
-        y = []
+        x = {}
+        y = {}
+        
         # foreach modality 
         for j in range(len(self.modalities)):
             # if current modality is used 
@@ -101,8 +107,10 @@ class DatasetFolder(object):
                     Y = np.concatenate((Y, self.dataset[i].data[self.modalities[j]].Y))
                 
                 # append to final list 
-                x.append(X)
-                y.append(Y)
+                # x.append(X)
+                # y.append(Y)
+                x.update({self.modalities[j]:X})
+                y.update({self.modalities[j]:Y})                
         return x, y 
             
     def get_idx(self, filter_name, filter_values):
@@ -247,10 +255,20 @@ class Modality(object):
         self.data = None
         self.shape = None
         
-def myFunc():
-    print('I do not compute anything')
-    print('If you want to compute a derivated index')
-    print('implement your code here')
+
+
+class CustomDataset(Dataset):
+        def __init__(self, datas, modality):
+            self.inputs = datas['inputs'][modality]
+            self.labels = datas['labels'][modality]
+
+        def __len__(self):
+            return len(self.inputs)
+
+        def __getitem__(self, idx):
+            return self.inputs[idx], self.labels[idx]
+
+
            
 if __name__ == '__main__':
     # create a object datasetFolder 
@@ -266,24 +284,33 @@ if __name__ == '__main__':
     d.set_modalities(['13xy', '13xyz'])
     # select idx by using a filter name and some filter values 
     # filter_values is always a list of value 
-    idx = d.get_idx(filter_name='user_ethnie', 
-                            filter_values=['Freddie Mercury sosie', 'Compagnie Créole lover'])
+    idx = d.get_idx(filter_name='user_glass', 
+                            filter_values=[0])
     # load data for those idx and modalities specified 
     # d.dataset[idx].data[modality].X is loaded 
-    d.load(idx, ['13xy', '13xyz'])
+    d.load(idx, [ '13xyz'])
     # get data inside list of array 
     x, y = d.get(idx=idx)
-    print('x shape = [{}, {}]'.format(x[0].shape, x[1].shape))
-    print('y shape = [{}, {}]'.format(y[0].shape, y[1].shape))
-    
-    
-    info = {}
-    info['user_ID'] = 0 
-    info['modalities'] = ['13xy', '13xyz']
-    info['user_sexe'] = 'homme'
-    info['user_glass'] = 0 
-    info['user_ethnie'] = 'Freddie Mercury sosie'
+    datas = {'inputs' : x, 'labels' : y}
+    # print('x shape = [{}, {}]'.format(x[0].shape, x[1].shape))
+    # print('y shape = [{}, {}]'.format(y[0].shape, y[1].shape))
 
-    import faceandmouse.dataset.dataExtractor as de 
-    d.add_folder('./data_to_add', info, 
-                 [de.compute_13xy, de.compute_13xyz])
+    print('|- x shape = {} -|- y shape = {} -|'.format(x['13xyz'].shape, y['13xyz'].shape))
+
+    
+##################################################################################################################################################
+    CustomDataset = CustomDataset(datas, '13xyz')
+    dataloader = DataLoader(CustomDataset, batch_size=32, shuffle=True, drop_last=True)
+    features, labels = next(iter(dataloader))
+    print('|- features shape = {} -|- labels shape = {} -|- batch number = {} -|'.format(features.size(),  labels.size(), len(dataloader)))
+##################################################################################################################################################
+    # info = {}
+    # info['user_ID'] = 0 
+    # info['modalities'] = ['13xy', '13xyz']
+    # info['user_sexe'] = 'homme'
+    # info['user_glass'] = 0 
+    # info['user_ethnie'] = 'Freddie Mercury sosie'
+
+    # import faceandmouse.dataset.dataExtractor as de 
+    # d.add_folder('./data_to_add', info, 
+    #              [de.compute_13xy, de.compute_13xyz])
