@@ -258,15 +258,22 @@ class Modality(object):
 
 
 class CustomDataset(Dataset):
-        def __init__(self, datas, modality):
-            self.inputs = datas['inputs'][modality]
-            self.labels = datas['labels'][modality]
+        def __init__(self, datas, modalities):
+            self.modality_nb = len(modalities)
+            self.labels = datas['labels'][modalities[0]]
+            self.inputs = []
+            for modality in modalities : 
+                self.inputs.append(datas['inputs'][modality])
+                
 
         def __len__(self):
-            return len(self.inputs)
+            return len(self.inputs[0])
 
         def __getitem__(self, idx):
-            return self.inputs[idx], self.labels[idx]
+            self.input_list = []
+            for modality_index in range(self.modality_nb):
+                self.input_list.append(self.inputs[modality_index][idx]) 
+            return self.input_list, self.labels[idx]
 
 
            
@@ -288,21 +295,25 @@ if __name__ == '__main__':
                             filter_values=[0])
     # load data for those idx and modalities specified 
     # d.dataset[idx].data[modality].X is loaded 
-    d.load(idx, [ '13xyz'])
+    d.load(idx, [ '13xyz', '13xy'])
     # get data inside list of array 
     x, y = d.get(idx=idx)
     datas = {'inputs' : x, 'labels' : y}
     # print('x shape = [{}, {}]'.format(x[0].shape, x[1].shape))
     # print('y shape = [{}, {}]'.format(y[0].shape, y[1].shape))
 
-    print('|- x shape = {} -|- y shape = {} -|'.format(x['13xyz'].shape, y['13xyz'].shape))
+    print('|- input 13xy shape = {} -|- label 13xy shape = {} -|'.format(x['13xy'].shape, y['13xy'].shape))
 
+    print('|- input 13xyz shape = {} -|- label 13xyz shape = {} -|'.format(x['13xyz'].shape, y['13xyz'].shape))
     
 ##################################################################################################################################################
-    CustomDataset = CustomDataset(datas, '13xyz')
-    dataloader = DataLoader(CustomDataset, batch_size=32, shuffle=True, drop_last=True)
+
+    CustomDataset = CustomDataset(datas, ['13xy','13xyz'])
+    dataloader = DataLoader(CustomDataset, batch_size=64, shuffle=True, drop_last=True)
     features, labels = next(iter(dataloader))
-    print('|- features shape = {} -|- labels shape = {} -|- batch number = {} -|'.format(features.size(),  labels.size(), len(dataloader)))
+    # print(features)
+    print('|- feature 1 shape = {} -|- labels shape = {} -|- features number = {} -|- batch number = {} -|'.format(features[0].size(), labels.size(), len(features), len(dataloader)))
+    
 ##################################################################################################################################################
     # info = {}
     # info['user_ID'] = 0 
