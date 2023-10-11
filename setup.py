@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='lr_ai',
-      version='0.1.0',
+      version='0.3.0',
       description='LR Technologies template for articial intelligence related projects',
       author='LR Technologies - Boris Lenseigne, Julia Cohen, Adrien Dorise, Edouard Villain',
       author_email='{blenseigne, jcohen, adorise, evillain}@lrtechnologies.fr',

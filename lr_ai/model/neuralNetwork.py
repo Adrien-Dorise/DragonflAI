@@ -34,7 +34,7 @@ import torch
 from torch.cuda import amp  
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time 
 
  
 
@@ -59,8 +59,10 @@ class NeuralNetwork(nn.Module):
     
     def __init__(self, inputs=1023, outputs=2):
         super().__init__()
-        self.outputs = outputs
-        self.inputs = inputs
+        self.outputs    = outputs
+        self.inputs     = inputs
+        self.duration_t = 0
+        self.istrain = False
         
         #If available -> work on GPU
         self.device = torch.device('cuda:0' if is_available() else 'cpu')
@@ -68,7 +70,197 @@ class NeuralNetwork(nn.Module):
         self.architecture = nn.Sequential().to(self.device)
 
         self.model_name =  "NeuralNetwork"
+        
+    def _on_epoch_start(self, *args, **kwargs):
+        '''callback function, called at each epoch's start'''
+        self.architecture.train() 
+        self.current_batch_train = 0
+        
+    def _on_predict_start(self, *args, **kwargs):
+        '''callback function, called at each predict start'''
+        self.architecture.eval()
+        self.current_batch_test = 0
+        
+    def _on_predict_end(self, *args, **kwargs):
+        '''callback function, called at each predict end'''
+        pass 
+    
+    def _on_epoch_end(self, *args, **kwargs):
+        '''callback function, called at each epoch's end'''
+        pass 
+    
+    def _on_batch_start(self, *args, **kwargs):
+        '''callback function, called at each batch's start'''
+        self.start_t = time.time()
+    
+    def _on_batch_end(self, *args, **kwargs):
+        '''callback function, called at each batch's end'''
+        self.duration_t = time.time() - self.start_t
+    
+    def _on_training_start(self, *args, **kwargs):
+        '''callback function, called at training start'''
+        print('\tStart training...') 
+    
+    def _on_training_end(self, *args, **kwargs):
+        '''callback function, called at training end'''
+        print('\tEnd training...')
+        
+    def print_progress(self, epoch=0, lr=0, loss=0, val_loss=0, verbosity=1):
+        '''print a progress bar during training '''
+        size_bar = 40
+        i        = (size_bar * (self.current_batch_train + self.current_batch_test) // (self.steps_per_epoch_train + self.steps_per_epoch_test))
+        end      = '\r'
+        total    = (self.steps_per_epoch_train + self.steps_per_epoch_test) 
+        est_t    = np.around(self.duration_t * (total - (self.current_batch_train + self.current_batch_test)), decimals=2)
+        
+        if verbosity == 2:
+            end = '\n'
+        if verbosity > 0:
+            print('[ep {:4d}/{:4d}, TRAIN {:4d}/{:4d}, VAL {:4d}/{:4d}] : [{}>{}] : lr = {:5e} - loss = {:5e} - val_loss = {:5e} - time = {} sec.     '.format(epoch,self.epochs,
+                                                                                            self.current_batch_train, self.steps_per_epoch_train,
+                                                                                            self.current_batch_test, self.steps_per_epoch_test,
+                                                                                            '=' * i, ' ' * (size_bar - i),
+                                                                                            lr, loss, val_loss, est_t), end=end)
 
+    def init_results(self, loss_indicators, train_loader, test_loader, batch_size, epochs, *args, **kwargs):
+        self.use_gpu=False
+        #Use GPU if available
+        if torch.cuda.is_available():
+            print("CUDA compatible GPU found")
+            self.use_gpu=True
+        else:
+            print("No CUDA compatible GPU found")
+        
+        self.all_loss              = []
+        self.losses_train          = [[] for _ in range(loss_indicators)]
+        self.losses_val            = []
+        self.dataset_size          = len(train_loader) * batch_size
+        self.steps_per_epoch_train = len(train_loader)
+        self.steps_per_epoch_test  = len(test_loader)
+        self.epochs                = epochs
+        self.batch_size            = batch_size
+
+    def set_optimizer(self, 
+                      optimizer=AdamW, 
+                      learning_rate=1e-4, 
+                      weight_decay=1e-4, 
+                      *args, **kwargs):
+        '''set optimizer'''
+        self.opt = [None]
+        if weight_decay is None:
+            self.opt[0] = optimizer(self.architecture.parameters(), lr=learning_rate)
+        else:
+            self.opt[0] = optimizer(self.architecture.parameters(), lr=learning_rate, 
+                            weight_decay=weight_decay)
+        
+        self.scaler = [None]
+        self.scaler[0] = amp.GradScaler(enabled=self.use_gpu)
+        
+    def set_scheduler(self, scheduler=None, *args, **kwargs):
+        '''set scheduler'''
+        self.scheduler = [None]
+        
+        if self.scheduler is not None:
+            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.75, patience=10) 
+        
+    def update_scheduler(self, *args, **kwargs):
+        '''update scheduler'''
+        loss = kwargs['loss']
+        if(self.scheduler[0] is not None):
+            for scheduler in self.scheduler:
+                scheduler.step(loss)
+
+    def init_epoch(self, *args, **kwargs):
+        '''init epoch'''
+        loss_indicators   = kwargs['loss_indicators']
+        self.running_loss = [0 for _ in range(loss_indicators)]
+        for opt in self.opt:
+            opt.zero_grad()
+        self.batch_loss    = [[] for _ in range(loss_indicators)]
+        self.current_batch_train = 0
+        self.current_batch_test = 0
+    
+    def get_batch(self, *args, **kwargs):
+        '''get batch'''
+        sample = kwargs['sample']
+        return sample[0].to(self.device), sample[1].to(self.device)
+            
+    def loss_calculation(self, crit, inputs, target, *args, **kwargs):
+        '''compute loss'''
+        
+        outputs = self.forward(inputs)
+        loss    = crit(outputs, target)
+        
+        return loss, outputs
+
+    def update_train_loss(self, loss, *args, **kwargs):
+        '''Update the loss during train'''
+        inputs = kwargs["inputs"]
+        
+        for i in range(len(self.batch_loss)):
+            self.batch_loss[i].append([loss][i].cpu().item())
+            self.running_loss[i] += [loss][i].item() * inputs.size(0)                
+
+    def train_batch(self, *args, **kwargs):
+        '''train a batch '''
+        loss = kwargs['loss']
+        
+        #See here for detail about multiple scaler & optimizer
+        # https://pytorch.org/docs/stable/notes/amp_examples.html#working-with-multiple-models-losses-and-optimizers
+        for idx, scaler in enumerate(self.scaler):
+            retain_graph = (idx < len(self.scaler)-1)    
+            scaler.scale(loss).backward(retain_graph=retain_graph)    
+        
+        for scaler in self.scaler:
+            for opt in self.opt:
+                scaler.step(opt)
+
+        for scaler in self.scaler:
+            scaler.update()
+        
+        for opt in self.opt:
+            opt.zero_grad()
+
+        self.current_batch_train += 1
+
+    def plot_log(self, *args, **kwargs):
+        '''plot log during training'''
+        epoch                 = kwargs['epoch']
+        loss                  = kwargs['loss']
+        val_loss              = kwargs['val_loss']
+        verbosity             = kwargs['verbosity']
+        
+        lr = self.opt[0].param_groups[0]['lr']
+        
+        verbose = verbosity
+        if self.current_batch_test == self.steps_per_epoch_test:
+            #if info == 'VAL':
+            verbose = 2
+                
+        self.print_progress(epoch+1, lr, loss, val_loss, verbose)
+
+    def save_epoch_end(self, *args, **kwargs):
+        epoch           = kwargs['epoch']
+        loss_indicators = kwargs['loss_indicators']
+        dataset_size    = kwargs['dataset_size']
+        
+        #if epoch == 0: #Print network architecture
+        #    draw_graph(self.architecture, input_data=inputs, save_graph=True,directory="models/tmp/")
+
+        self.epoch_losses = [[] for _ in range(loss_indicators)]
+        for i in range(loss_indicators):
+            self.epoch_losses[i] = self.running_loss[i] / dataset_size
+            self.losses_train[i].append(self.epoch_losses[i])        
+            
+        if epoch % 100 == 0: #Save model every X epochs
+            self.saveModel(f"models/tmp/epoch{epoch}")
+            
+        if self.losses_train[0][-1] == np.min(self.losses_train[0]):
+            self.saveModel("./models/tmp/{}_ep_{}_best_train".format(self.model_name, epoch))
+        #if self.losses_val[-1] == np.min(self.losses_val):
+        #    self.saveModel("./models/tmp/{}_ep_{}_best_val".format(self.model_name, epoch))
+                
+        
     def update_outputs(self):
         """Change the last layer of the network to match the desired number of outputs.
         
@@ -86,8 +278,8 @@ class NeuralNetwork(nn.Module):
             learning_rate=0.001, 
             weight_decay=None, 
             valid_set=None,
-            use_scheduler=False,
-            loss_indicators=1):
+            loss_indicators=1, 
+            batch_size=2):
         """Train a model on a training set
         print(f"Pytorch is setup on: {self.device}")
 
@@ -99,107 +291,40 @@ class NeuralNetwork(nn.Module):
             optimizer (torch.optim): Optimizer used during training for backpropagation (default = Adam - see: https://pytorch.org/docs/stable/optim.html#torch.optim.Optimizer)
             learning_rate: learning_rate used during backpropagation (default = 0.001)
             valid_set (torch.utils.data.DataLoader): Validation set used to verify model learning. Not mandatory (default = None)
-            use_scheduler (bool): Set to true to use a learning rate scheduler (default = False)
             loss_indicators (int): Number of loss indicators used during training. Most NN only need one indicator, but distillation models need three (loss, loss_trainer, loss_student). (default = 1)
         """
-        use_gpu=False
-        #Use GPU if available
-        if torch.cuda.is_available():
-            print("CUDA compatible GPU found")
-            use_gpu=True
-        else:
-            print("No CUDA compatible GPU found")
+        self.istrain = True
+        self._on_training_start()
+        self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
+        self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
+        self.set_scheduler(None)
         
-        crit = criterion
-        if weight_decay is None:
-            opt = optimizer(self.architecture.parameters(), lr=learning_rate)
-        else:
-            opt = optimizer(self.architecture.parameters(), lr=learning_rate, 
-                            weight_decay=weight_decay)
+        for epoch in range(epochs):
+            self._on_epoch_start()
+            self.init_epoch(loss_indicators=loss_indicators)
+            for batch_ndx, sample in enumerate(train_set):
+            #for i in range(self.steps_per_epoch):
+                self._on_batch_start()
+                inputs, targets = self.get_batch(sample=sample)
+                loss,_ = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators)
+                self.update_train_loss(loss, inputs=inputs)
+                
+                self.train_batch(loss=loss)
+                self.update_scheduler(loss=loss)
+                self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, verbosity=1)
+                self._on_batch_end()
+                
+            self.save_epoch_end(epoch=epoch, loss_indicators=loss_indicators, dataset_size=self.dataset_size)
+            self._on_epoch_end()
+            val_loss, _, _ = self.predict(valid_set, crit=criterion, loss_indicators=1, epoch=epoch, train_loss=np.mean(self.batch_loss))
+            self.losses_val.append(val_loss)
         
-        scaler = amp.GradScaler(enabled=use_gpu)
-        if(use_scheduler):
-            scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, 
-                                                            max_lr=learning_rate, 
-                                                            epochs=epochs, 
-                                                            steps_per_epoch= len(train_set),
-                                                            pct_start=0.1)
-        
-        print("\nTraining START")
-        all_loss = []
-        losses_train = [[] for _ in range(loss_indicators)]
-        losses_val = []
-        for epoch in range(epochs):  # loop over the dataset multiple times
-            running_loss = [0 for _ in range(loss_indicators)]
-            self.architecture.train()
-            # zero the parameter gradients
-            opt.zero_grad()
-
-            batch_loss = [[] for _ in range(loss_indicators)]
-            progress_bar = tqdm(enumerate(train_set), total=len(train_set))
-            dataset_size = 0
-            for i, data in progress_bar:
-                # get the inputs; data is a list of [inputs, target]
-                if use_gpu:
-                    inputs = data[0].to(self.device, non_blocking=True)
-                    target = data[1].to(self.device)
-                    self.architecture.to(self.device)
-                else:
-                    inputs, target = data[0], data[1]
-                # forward + backward + optimize
-
-                losses = self.loss_calculation(crit,inputs,target)
-                loss = losses[0]
-                #print(f"inputs: {inputs}")
-                #print(f"targets: {target}")
-
-                # print statistics
-                for i in range(loss_indicators):
-                    batch_loss[i].append(losses[i].cpu().item())
-                    running_loss[i] += losses[i].item() * inputs.size(0)
-                    
-                display_loss = np.mean(batch_loss[0])
-                all_loss.append(loss.cpu().item())
-                dataset_size += inputs.size(0)
-
-                # Backward pass and optimization
-                scaler.scale(loss).backward()
-                scaler.step(opt)
-                scaler.update()
-                opt.zero_grad()
-                if(use_scheduler):
-                    s = ('%10s' * 1 + 'Loss :%10.4g' * 1 + ' Learning Rate: %10.4g') % ('%g/%g' % (epoch+1, epochs), display_loss, scheduler.get_last_lr()[0])
-                    scheduler.step()
-                else:
-                    s = ('%10s' * 1 + 'Loss :%10.4g' * 1 + ' Learning Rate: %10.4g') % ('%g/%g' % (epoch+1, epochs), display_loss, learning_rate)
-                progress_bar.set_description(s)
-            mbl = np.mean(np.sqrt(batch_loss)).round(4) 
-            
-            if epoch == 0: #Print network architecture
-                draw_graph(self.architecture, input_data=inputs, save_graph=True,directory="models/tmp/")
-
-            if epoch % 1 == 0:    # print every epoch
-                print(f"Epoch [{epoch+1}/{epochs}], Batch loss: {mbl}")
-
-            if epoch % 100 == 0: #Save model every X epochs
-                self.saveModel(f"models/tmp/epoch{epoch}")
-            
-            if valid_set is not None and epoch%1==0: #Calculate validation loss
-                loss,_,_ = self.predict(valid_set, crit=criterion)
-                losses_val.append(loss)
-                print(f"\nValidation error is {loss}")
-
-            epoch_losses = [[] for _ in range(loss_indicators)]
-            for i in range(loss_indicators):
-                epoch_losses[i] = running_loss[i] / dataset_size
-                losses_train[i].append(epoch_losses[i])
+        self._on_training_end()
+        self.istrain = False
+        return self.losses_train, self.losses_val
 
 
-        print('Finished Training')
-        return losses_train, losses_val
-
-
-    def predict(self, test_set, crit=nn.L1Loss()):
+    def predict(self, test_set, crit=nn.L1Loss(), loss_indicators=1, epoch=0, train_loss=0):
         """Use the trained model to predict a target values on a test set
         
         For now, we assume that the target value is known, so it is possible to calculate an error value.
@@ -213,30 +338,26 @@ class NeuralNetwork(nn.Module):
             output (list): Model prediction on the test set
             [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
-        self.architecture.eval()
-        progress_bar = tqdm(enumerate(test_set), total=len(test_set))
-        use_gpu = torch.cuda.is_available()
-        with torch.no_grad():
-            inputs, outputs, targets, test_loss = [],[],[],[]
-            for i, data in progress_bar:
-                # get the inputs; data is a list of [inputs, target]
-                features = data[0].to(self.device, non_blocking=True)
-                target = data[1]
+        self._on_predict_start()
+        inputs, outputs, targets, test_loss = [],[],[],[]
+        for batch_ndx, sample in enumerate(test_set):
+            input, target = self.get_batch(sample=sample)
+            loss, output = self.loss_calculation(crit, input, target)
 
-                # forward
-                #with amp.autocast(enabled=use_gpu):
-                output = self.forward(features)
-
-                inputs.extend(np.array(features.cpu().detach(), dtype=np.float32))
-                targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
-                outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
-                loss = crit(output.cpu().float(), target)
-                test_loss.append(loss.item())
+            inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
+            targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
+            test_loss.append(loss.item())
+            self.current_batch_test += 1 
+            if(self.istrain):
+                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), verbosity=1)
+            else:
+                print(f"Test loss: {loss}")
 
         mean_loss = np.mean(test_loss)
+        self._on_predict_end()
         return mean_loss, np.asarray(outputs), [np.asarray(inputs), np.asarray(targets)]
-    
-            
+      
         
     def forward(self, data):
         """Forward propagation.
@@ -251,13 +372,6 @@ class NeuralNetwork(nn.Module):
         """
 
         return self.architecture(data)
-    
-    def loss_calculation(self, crit, inputs, target):
-    
-        outputs = self.forward(inputs)
-        loss = crit(outputs, target) 
-
-        return [loss] 
         
         
     def saveModel(self, path, epoch=None):
@@ -276,7 +390,7 @@ class NeuralNetwork(nn.Module):
             iterator+=1
 
         torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
-        print("Saved model to " + path + "_" + str(iterator))
+        #print("Saved model to " + path + "_" + str(iterator))
         
         
     def loadModel(self, path):    
