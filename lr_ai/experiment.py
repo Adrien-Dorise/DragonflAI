@@ -283,10 +283,6 @@ class Experiment():
         elif(option == LookAtScreenOptions.OFFLINE_MEAN_SALIENCY):
             self.model.Saliency_map([self.visu_path + "/" + img for img in os.listdir(self.visu_path)])
 
-
-
-
-
     def save(self, filename):
         """Save the whole experiment class as a pickle object.
 
@@ -294,13 +290,21 @@ class Experiment():
             filename (string): Path to save the experiment status
         """
         with open(filename, 'wb') as file:
-            pickle.dump(self, file)
+            try:
+                pickle.dump(self, file)
+            except EOFError:
+                raise Exception("Error in save experiment: Pickle was not able to save the file.")
 
+    @classmethod
     def load(self, filename):
         """Load a pickle object to an Experiment class Python variable
+        This is a class method. It means that a reference to the class is NOT necessary to call this method. Simply type <your_experiment = Experiment.load(filename)>
 
         Args:
             filename (string): Path to the pickle saved object.
         """
         with open(filename, 'rb') as file:
-           self = pickle.load(file)
+            try:
+                return pickle.load(file)
+            except EOFError:
+                raise Exception("Error in load experiment: Pickle was not able to retrieve the file.")
