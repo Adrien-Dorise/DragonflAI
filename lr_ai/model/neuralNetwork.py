@@ -35,6 +35,7 @@ from torch.cuda import amp
 import numpy as np
 import matplotlib.pyplot as plt
 import time 
+import os 
 
  
 
@@ -62,7 +63,8 @@ class NeuralNetwork(nn.Module):
         self.outputs    = outputs
         self.inputs     = inputs
         self.duration_t = 0
-        self.istrain = False
+        self.istrain    = False
+        self.verbosity  = 1
         
         #If available -> work on GPU
         self.device = torch.device('cuda:0' if is_available() else 'cpu')
@@ -104,23 +106,6 @@ class NeuralNetwork(nn.Module):
     def _on_training_end(self, *args, **kwargs):
         '''callback function, called at training end'''
         print('\tEnd training...')
-        
-    def print_progress(self, epoch=0, lr=0, loss=0, val_loss=0, verbosity=1):
-        '''print a progress bar during training '''
-        size_bar = 40
-        i        = (size_bar * (self.current_batch_train + self.current_batch_test) // (self.steps_per_epoch_train + self.steps_per_epoch_test))
-        end      = '\r'
-        total    = (self.steps_per_epoch_train + self.steps_per_epoch_test) 
-        est_t    = np.around(self.duration_t * (total - (self.current_batch_train + self.current_batch_test)), decimals=2)
-        
-        if verbosity == 2:
-            end = '\n'
-        if verbosity > 0:
-            print('[ep {:4d}/{:4d}, TRAIN {:4d}/{:4d}, VAL {:4d}/{:4d}] : [{}>{}] : lr = {:5e} - loss = {:5e} - val_loss = {:5e} - time = {} sec.     '.format(epoch,self.epochs,
-                                                                                            self.current_batch_train, self.steps_per_epoch_train,
-                                                                                            self.current_batch_test, self.steps_per_epoch_test,
-                                                                                            '=' * i, ' ' * (size_bar - i),
-                                                                                            lr, loss, val_loss, est_t), end=end)
 
     def init_results(self, loss_indicators, train_loader, test_loader, batch_size, epochs, *args, **kwargs):
         self.use_gpu=False
@@ -225,19 +210,37 @@ class NeuralNetwork(nn.Module):
 
     def plot_log(self, *args, **kwargs):
         '''plot log during training'''
-        epoch                 = kwargs['epoch']
-        loss                  = kwargs['loss']
-        val_loss              = kwargs['val_loss']
-        verbosity             = kwargs['verbosity']
         
-        lr = self.opt[0].param_groups[0]['lr']
-        
-        verbose = verbosity
-        if self.current_batch_test == self.steps_per_epoch_test:
-            #if info == 'VAL':
-            verbose = 2
+        if self.verbosity > 0:
+            epoch    = kwargs['epoch']
+            loss     = kwargs['loss']
+            val_loss = kwargs['val_loss']
+            lr       = kwargs['lr']
+            
+            column, _ = os.get_terminal_size()
+            verbose = self.verbosity
+            if self.current_batch_test == self.steps_per_epoch_test:
+                verbose = 2
                 
-        self.print_progress(epoch+1, lr, loss, val_loss, verbose)
+            if not self.istrain:
+                lr = 0
+                    
+            size_bar = column - 115
+            i        = (size_bar * (self.current_batch_train + self.current_batch_test) // (self.steps_per_epoch_train + self.steps_per_epoch_test))
+            end      = '\r'
+            total    = (self.steps_per_epoch_train + self.steps_per_epoch_test) 
+            if self.current_batch_test == self.steps_per_epoch_test:
+                est_t = 't ~ {} s.'.format(np.around(self.duration_t * total, decimals=2))
+            else:
+                est_t  = 't ~ {} s.'.format(np.around(self.duration_t * (total - (self.current_batch_train + self.current_batch_test)), decimals=2))
+            
+            if verbose == 2:
+                end = '\n'
+                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
+                                                                                                self.current_batch_train, self.steps_per_epoch_train,
+                                                                                                self.current_batch_test, self.steps_per_epoch_test,
+                                                                                                '=' * i, ' ' * (size_bar - i),
+                                                                                                lr, loss, val_loss, est_t), end=end)
 
     def save_epoch_end(self, *args, **kwargs):
         epoch           = kwargs['epoch']
@@ -255,10 +258,13 @@ class NeuralNetwork(nn.Module):
         if epoch % 100 == 0: #Save model every X epochs
             self.saveModel(f"models/tmp/epoch{epoch}")
             
-        if self.losses_train[0][-1] == np.min(self.losses_train[0]):
-            self.saveModel("./models/tmp/{}_ep_{}_best_train".format(self.model_name, epoch))
-        #if self.losses_val[-1] == np.min(self.losses_val):
-        #    self.saveModel("./models/tmp/{}_ep_{}_best_val".format(self.model_name, epoch))
+        try:  
+            if self.losses_train[0][-1] == np.min(self.losses_train[0]):
+                self.saveModel("./models/tmp/{}_best_train".format(self.model_name, epoch))
+            if self.losses_val[-1] == np.min(self.losses_val):
+                self.saveModel("./models/tmp/{}_best_val".format(self.model_name, epoch))
+        except:
+            pass 
                 
         
     def update_outputs(self):
@@ -302,6 +308,7 @@ class NeuralNetwork(nn.Module):
         for epoch in range(epochs):
             self._on_epoch_start()
             self.init_epoch(loss_indicators=loss_indicators)
+            self.plot_log(epoch=epoch, loss=0, val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
             for batch_ndx, sample in enumerate(train_set):
             #for i in range(self.steps_per_epoch):
                 self._on_batch_start()
@@ -311,7 +318,7 @@ class NeuralNetwork(nn.Module):
                 
                 self.train_batch(loss=loss)
                 self.update_scheduler(loss=loss)
-                self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, verbosity=1)
+                self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
                 self._on_batch_end()
                 
             self.save_epoch_end(epoch=epoch, loss_indicators=loss_indicators, dataset_size=self.dataset_size)
@@ -350,7 +357,7 @@ class NeuralNetwork(nn.Module):
             test_loss.append(loss.item())
             self.current_batch_test += 1 
             if(self.istrain):
-                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), verbosity=1)
+                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), lr=self.opt[0].param_groups[0]['lr'])
             else:
                 print(f"Test loss: {loss}")
 
