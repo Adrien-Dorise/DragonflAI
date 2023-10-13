@@ -236,11 +236,11 @@ class NeuralNetwork(nn.Module):
             
             if verbose == 2:
                 end = '\n'
-                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
-                                                                                                self.current_batch_train, self.steps_per_epoch_train,
-                                                                                                self.current_batch_test, self.steps_per_epoch_test,
-                                                                                                '=' * i, ' ' * (size_bar - i),
-                                                                                                lr, loss, val_loss, est_t), end=end)
+            print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
+                                                                                            self.current_batch_train, self.steps_per_epoch_train,
+                                                                                            self.current_batch_test, self.steps_per_epoch_test,
+                                                                                            '=' * i, ' ' * (size_bar - i),
+                                                                                            lr, loss, val_loss, est_t), end=end)
 
     def save_epoch_end(self, *args, **kwargs):
         epoch           = kwargs['epoch']
