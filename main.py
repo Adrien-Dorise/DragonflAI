@@ -9,10 +9,10 @@
 
 if __name__ == "__main__":
     
-	from lr_ai.config.ML_config import *
-	from lr_ai.config.NN_config import *
-	from lr_ai.config.data_config import *
-	from lr_ai.experiment import *
+	from dragonflai.config.ML_config import *
+	from dragonflai.config.NN_config import *
+	from dragonflai.config.data_config import *
+	from dragonflai.experiment import *
 	
 	experiment = Experiment(NN_model,
 			train_path,
@@ -36,3 +36,4 @@ if __name__ == "__main__":
 
 	experiment.fit()
 	experiment.predict()
+	experiment.visualise_lookAtScreen()

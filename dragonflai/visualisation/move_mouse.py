@@ -2,7 +2,7 @@
 This package references all neural network classes used in the application.
 Author: Julia Cohen (jcohen@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Adrien Dorise (adorise@lrtechnologies.fr) - August 2023
+Last updated: Adrien Dorise (adorise@lrtechnologies.fr) - November 2023
 """
 
 import argparse
@@ -14,11 +14,11 @@ import torch
 from torchvision import transforms
 import pyautogui
 
-from lr_ai.model.neuralNetwork import FaceTrackerNN
-from lr_ai.model.machineLearning import Regressor
-from lr_ai.features.preprocessing import load_metadata, getTrackerSet
-from lr_ai.visualisation.display_mouse_prediction import draw_point_on_frame
-from lr_ai.features.tracker_toolbox import crop_face, get_landmarks, get_detector
+from dragonflai.model.neuralNetwork import FaceTrackerNN
+from dragonflai.model.machineLearning import Regressor
+from dragonflai.features.preprocessing import load_metadata, getTrackerSet
+from dragonflai.visualisation.display_mouse_prediction import draw_point_on_frame
+from dragonflai.features.tracker_toolbox import crop_face, get_landmarks, get_detector
 
 im2ten_tf = transforms.Compose([
             transforms.ToTensor(),  # convert from [0, 255] to [0.0, 0.1]

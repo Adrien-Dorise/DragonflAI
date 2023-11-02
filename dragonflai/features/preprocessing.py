@@ -2,7 +2,7 @@
  Preprocessing toolbox for data coming from the faceMask app
  Author: Julia Cohen - Adrien Dorise ({jcohen, adorise}@lrtechnologies.fr) - LR Technologies
  Created: Feb 2023
- Last updated: Julia Cohen - October 2023
+ Last updated: Adrien Dorise - November 2023
 """
 
 import os
@@ -17,7 +17,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 from lr_facetracker.detection import MeshFaceDetector
-from lr_ai.features.tracker_toolbox import select_points
+from dragonflai.features.tracker_toolbox import select_points
 
 
 class Dataset(Dataset):

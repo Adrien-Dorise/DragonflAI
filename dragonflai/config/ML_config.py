@@ -2,11 +2,11 @@
  Parameters for machine learning applications
  Author: Adrien Dorise (adorise@lrtechnologies.fr) - LR Technologies
  Created: June 2023
- Last updated: Adrien Dorise - June 2023
+ Last updated: Adrien Dorise - November 2023
 """
 
 import sklearn.tree as tree
-from lr_ai.model.machineLearning import Regressor
+from dragonflai.model.machineLearning import Regressor
 
 
 availableModels = ["tweedie", "bayesLinear", "SGD", "SVM", "KNN", "tree", "forest", "AdaBoost", "GBoost"]

@@ -2,16 +2,16 @@
 This package references all neural network classes used in the application.
 Author: Adrien Dorise - Edouard Villain - Julia Cohen ({adorise, evillain, jcohen}@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Adrien Dorise - August 2023
+Last updated: Adrien Dorise - November 2023
 '''
 
-import lr_ai.features.preprocessing as pr
-import lr_ai.features.image_preprocessing as imgpr
-import lr_ai.visualisation.display_mouse_prediction as visu
-import lr_ai.visualisation.draw_tracker as draw_tracker
-#import lr_ai.visualisation.evaluate_tracker as eval
-from lr_ai.model.machineLearning import Regressor
-from lr_ai.model.neural_network_architectures.lookAtScreen import lookAtScreenDistillation, LookAtScreenClassification
+import dragonflai.features.preprocessing as pr
+import dragonflai.features.image_preprocessing as imgpr
+import dragonflai.visualisation.display_mouse_prediction as visu
+import dragonflai.visualisation.draw_tracker as draw_tracker
+#import dragonflai.visualisation.evaluate_tracker as eval
+from dragonflai.model.machineLearning import Regressor
+from dragonflai.model.neural_network_architectures.lookAtScreen import lookAtScreenDistillation, LookAtScreenClassification
 
 import pickle
 from sklearn.preprocessing import MinMaxScaler

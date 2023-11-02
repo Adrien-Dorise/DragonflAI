@@ -1,6 +1,6 @@
 import torch.nn as nn
 
-from lr_ai.model.neuralNetwork import NeuralNetwork
+from dragonflai.model.neuralNetwork import NeuralNetwork
 
 
 
@@ -39,3 +39,5 @@ class fullyConnectedNN(NeuralNetwork):
         self.architecture.add_module('lin3', nn.Linear(128, self.outputs))
         nn.init.xavier_normal_(self.architecture[-1].weight)
         self.architecture.add_module('relu3', nn.Sigmoid())
+        
+        self.architecture.to(self.device)

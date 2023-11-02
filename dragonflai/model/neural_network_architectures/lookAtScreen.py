@@ -1,5 +1,5 @@
-from lr_ai.features.tracker_toolbox import crop_face, get_detector, get_landmarks
-from lr_ai.model.neuralNetwork import NeuralNetwork
+from dragonflai.features.tracker_toolbox import crop_face, get_detector, get_landmarks
+from dragonflai.model.neuralNetwork import NeuralNetwork
 import io
 import cv2
 from matplotlib import pyplot as plt
