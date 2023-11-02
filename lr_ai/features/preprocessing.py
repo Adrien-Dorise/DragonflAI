@@ -2,7 +2,7 @@
  Preprocessing toolbox for data coming from the faceMask app
  Author: Julia Cohen - Adrien Dorise ({jcohen, adorise}@lrtechnologies.fr) - LR Technologies
  Created: Feb 2023
- Last updated: Adrien Dorise - July 2023
+ Last updated: Julia Cohen - October 2023
 """
 
 import os
@@ -16,7 +16,7 @@ import sklearn.utils as utils
 import torch
 from torch.utils.data import Dataset, DataLoader
 
-from camerasensor import MeshFaceDetector
+from lr_facetracker.detection import MeshFaceDetector
 from lr_ai.features.tracker_toolbox import select_points
 
 
@@ -155,7 +155,7 @@ def video2tracker(video_file, save_folder):
     if not os.path.isdir(save_folder):
         os.mkdir(save_folder)
     save_path = os.path.join(save_folder, os.path.basename(video_file).replace(os.path.splitext(video_file)[-1], ".csv"))
-    detector = MeshFaceDetector(refine_landmarks=True)
+    detector = MeshFaceDetector(detect_iris=True)
 
     cap = cv2.VideoCapture(video_file)
     if not cap.isOpened():
@@ -168,30 +168,18 @@ def video2tracker(video_file, save_folder):
         columns = list()
         while ret:
             data = list()
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            landmarks = detector.detect(rgb_frame, roi=None)
-            landmarks = detector.postprocess_detections(landmarks)
+            landmarks = detector.process(frame).get_landmarks()
+            
             if landmarks is None:
-                data.append(-1)
-                data.append(-1)
-                data.append(-1)
+                data = [-1, -1, -1]
 
                 all_data.append(data)
                 ret, frame = cap.read()
                 continue
-
-            rel_landmarks = detector.absolute_to_relative_landmarks(landmarks, shape=rgb_frame.shape)
             
-            for i in range(len(rel_landmarks.multi_face_landmarks[0].landmark)):
+            for i, lmk in enumerate(landmarks):
                 # Get all points from one frame
-                point = [
-                rel_landmarks.multi_face_landmarks[0].landmark[i].x,
-                    rel_landmarks.multi_face_landmarks[0].landmark[i].y,
-                    rel_landmarks.multi_face_landmarks[0].landmark[i].z
-                    ] 
-                data.append(point[0])
-                data.append(point[1])
-                data.append(point[2])
+                data.extend(lmk) 
                 if fill_cols:
                     columns.append(f'pt{i}_x')
                     columns.append(f'pt{i}_y')
@@ -254,7 +242,7 @@ def selectEventsWithFrames(target):
     ind.sort()
     return target[ind, :]
 
-def dataSplit(features, target, split=0.8, batch_size = 16, no_batch = False, shuffle = True):
+def dataSplit(features, target, split=0.8, batch_size=16, no_batch=False, shuffle=True):
     """Create train and test set from a unique data set
 
     A simple split is performed. Both train and test set are then inserted into Pytorch DataLoader
@@ -398,7 +386,7 @@ def multi_file_set(videos_list):
 
 
 if __name__ == "__main__":
-    TEST = "multi_file"
+    TEST = "tracker"
 
     if TEST == "csv":
         a = np.array([1,2,3,4])
@@ -408,8 +396,9 @@ if __name__ == "__main__":
 
         write_csv(a,folderPath,filePath)
         b = load_csv(folderPath + filePath)
+    
     elif TEST == "tracker":
-        video2tracker(r'data/user 2023-03-21 142117.avi', 'output_folder')
+        video2tracker(r'data/debug/user 2023-03-22 094727.avi', 'output')
         
     elif TEST == "load_data":
         a,b = getTrackerSet("output_folder/user 2023-03-21 142117.csv", "data/mouse 2023-03-21 142117.csv")

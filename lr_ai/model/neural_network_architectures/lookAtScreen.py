@@ -119,7 +119,7 @@ class LookAtScreenClassification(NeuralNetwork):
         while cap.isOpened():
             ret, frame = cap.read()
 
-            landmarks = get_landmarks(frame,detector)
+            landmarks = get_landmarks(frame, detector)
             if landmarks is not None:
                 img = crop_face(frame, landmarks)
                 img = transform(img)
