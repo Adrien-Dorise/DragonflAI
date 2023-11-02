@@ -9,8 +9,8 @@ import numpy as np
 import torch.nn as nn
 import torch
 
-from lr_ai.features.preprocessing import load_metadata, getTrackerSet
-from lr_ai.visualisation.display_mouse_prediction import draw_point_on_frame
+from dragonflai.features.preprocessing import load_metadata, getTrackerSet
+from dragonflai.visualisation.display_mouse_prediction import draw_point_on_frame
 
 def tracker_no_AI(folder_path, config_file='lr_ai/config/trackerConfig.json'):
     """This method applies an eyetracker (without AI) to an input video.

@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torchvision
 
-from lr_ai.model.neuralNetwork import NeuralNetwork
+from dragonflai.model.neuralNetwork import NeuralNetwork
 
 
 class ConvBlock(nn.Module):

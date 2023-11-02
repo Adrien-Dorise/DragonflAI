@@ -4,9 +4,9 @@ import torch
 import os
 from enum import Enum
 
-from lr_ai.features.preprocessing import load_metadata, getTrackerSet
-from lr_ai.visualisation.draw_tracker import process_one_frame
-from lr_ai.features.tracker_toolbox import get_detector, crop_face, crop_eyes, get_landmarks
+from dragonflai.features.preprocessing import load_metadata, getTrackerSet
+from dragonflai.visualisation.draw_tracker import process_one_frame
+from dragonflai.features.tracker_toolbox import get_detector, crop_face, crop_eyes, get_landmarks
 
 class Background(Enum):
     ORIGINAL = 0
@@ -234,10 +234,10 @@ if __name__ == "__main__":
 
 
     elif test == "OUTPUT":
-        import lr_ai.features.preprocessing as pr
-        import lr_ai.features.image_preprocessing as imgpr
-        from lr_ai.model.machineLearning import Regressor
-        import lr_ai.model.neural_network_architectures.FCNN as NN
+        import dragonflai.features.preprocessing as pr
+        import dragonflai.features.image_preprocessing as imgpr
+        from dragonflai.model.machineLearning import Regressor
+        import dragonflai.model.neural_network_architectures.FCNN as NN
         from sklearn.preprocessing import MinMaxScaler
 
 

@@ -4,7 +4,7 @@ import os
 import numpy as np
 import cv2
 
-from lr_ai.features.tracker_toolbox import get_detector, V1, V2
+from dragonflai.features.tracker_toolbox import get_detector, V1, V2
 
 
 def load_video(path):

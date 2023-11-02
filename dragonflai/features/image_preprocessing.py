@@ -2,7 +2,7 @@
  Image preprocessing toolbox for data coming from the faceMask app
  Author: Julia Cohen - Adrien Dorise ({jcohen, adorise}@lrtechnologies.fr) - LR Technologies
  Created: March 2023
- Last updated: Julia Cohen - October 2023
+ Last updated: Adrien Dorise - November 2023
 """
 
 import os
@@ -15,8 +15,8 @@ from torchvision import transforms
 
 from imgaug import augmenters as iaa
 
-from lr_ai.features.tracker_toolbox import crop_face, crop_eyes, get_detector, get_landmarks
-from lr_ai.features.preprocessing import getTrackerSet, load_metadata
+from dragonflai.features.tracker_toolbox import crop_face, crop_eyes, get_detector, get_landmarks
+from dragonflai.features.preprocessing import getTrackerSet, load_metadata
 
 
 # ----------------

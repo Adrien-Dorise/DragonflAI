@@ -2,10 +2,10 @@
  Data related (paths, preprocessing...) parameters
  Author: Adrien Dorise (adorise@lrtechnologies.fr) - LR Technologies
  Created: June 2023
- Last updated: Adrien Dorise - August 2023
+ Last updated: Adrien Dorise - November 2023
 """
 
-from lr_ai.experiment import InputType, ParamType
+from dragonflai.experiment import InputType, ParamType
 from sklearn.preprocessing import MinMaxScaler
 
 

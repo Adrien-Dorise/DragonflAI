@@ -2,17 +2,17 @@
  Parameters for neural network applications
  Author: Adrien Dorise (adorise@lrtechnologies.fr) - LR Technologies
  Created: June 2023
- Last updated: Adrien Dorise - August 2023
+ Last updated: Adrien Dorise - November 2023
 """
 
 import torch
 import torch.nn.functional as F
 
-from lr_ai.experiment import ParamType
-import lr_ai.model.neural_network_architectures.lookAtScreen as classi
-import lr_ai.model.neural_network_architectures.CNN as CNN
-import lr_ai.model.neural_network_architectures.FCNN as FCNN
-import lr_ai.model.neural_network_architectures.temporal as temporal
+from dragonflai.experiment import ParamType
+import dragonflai.model.neural_network_architectures.lookAtScreen as classi
+import dragonflai.model.neural_network_architectures.CNN as CNN
+import dragonflai.model.neural_network_architectures.FCNN as FCNN
+import dragonflai.model.neural_network_architectures.temporal as temporal
 
 
 param = ParamType.MOVE_CURSOR

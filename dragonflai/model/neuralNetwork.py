@@ -2,7 +2,7 @@
 This package references all neural network classes used in the application.
 Author: Julia Cohen - Adrien Dorise - Edouard Villain ({jcohen, adorise, evillain}@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Adrien Dorise - August 2023
+Last updated: Adrien Dorise - November 2023
 
 Pytorch is the main API used.
 It is organised as follow:
