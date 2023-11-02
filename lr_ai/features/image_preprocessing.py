@@ -2,7 +2,7 @@
  Image preprocessing toolbox for data coming from the faceMask app
  Author: Julia Cohen - Adrien Dorise ({jcohen, adorise}@lrtechnologies.fr) - LR Technologies
  Created: March 2023
- Last updated: Adrien Dorise - August 2023
+ Last updated: Julia Cohen - October 2023
 """
 
 import os
@@ -554,7 +554,7 @@ def image_collate_fn(data):
     return torch.stack(imgs, 0), torch.stack(targets, 0)
 
 if __name__ == "__main__":
-    folder = './data/split1/train'
+    folder = './data/debug'
     dataset = ImageRegressionDataset(folder, train=False, crop=None, debug=False)
 
     print(f"Dataset of size {len(dataset)}")

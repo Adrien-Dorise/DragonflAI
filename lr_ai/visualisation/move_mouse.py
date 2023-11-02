@@ -66,15 +66,8 @@ def image2features(image, detector):
         print("No face detected in this frame")
         return
     features = list()
-    rel_landmarks = detector.absolute_to_relative_landmarks(landmarks, shape=image.shape)
-    for i in range(len(rel_landmarks.multi_face_landmarks[0].landmark)):
-        point = [rel_landmarks.multi_face_landmarks[0].landmark[i].x,
-                 rel_landmarks.multi_face_landmarks[0].landmark[i].y,
-                 rel_landmarks.multi_face_landmarks[0].landmark[i].z
-                 ] 
-        features.append(point[0])
-        features.append(point[1])
-        features.append(point[2])
+    for lmk in landmarks:
+        features.extend(lmk)
     features = torch.tensor(np.array(features), dtype=torch.float32)
     batch = torch.unsqueeze(features, 0)
     return batch

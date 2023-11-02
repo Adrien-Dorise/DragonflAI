@@ -1,14 +1,14 @@
 """
- Toolbox to process data using the eyetracker, for the faceMask app
+ Toolbox to process data using the eyetracker, for the Face&Mouse app
  Author: Julia Cohen (jcohen@lrtechnologies.fr) - LR Technologies
  Created: March 2023
- Last updated: Julia Cohen - March 2023
+ Last updated: Julia Cohen - October 2023
 """
 
 import cv2
 import numpy as np
 
-from camerasensor import MeshFaceDetector
+from lr_facetracker.detection import MeshFaceDetector
 
 # -----------------------------------------------------
 # Sets of points of interest
@@ -51,8 +51,9 @@ def crop_face(frame, landmarks, offset=10):
     ----------
     frame: np.ndarray/frame loaded by opencv
         The frame to crop.
-    landmarks: mediapipe FaceMesh SolutionOutput
-        Output of the eyetracker applied to the frame
+    landmarks: list of list of floats
+        Output of the facetracker applied to the frame, 
+        processed into a standard format [[x, y, z], ...].
     offset: int
         Number of pixels to keep around the face. Defaults to 10.
     Returns
@@ -69,8 +70,9 @@ def crop_eyes(frame, landmarks, offset=5):
     ----------
     frame: np.ndarray/frame loaded by opencv
         The frame to crop.
-    landmarks: mediapipe FaceMesh SolutionOutput
-        Output of the eyetracker applied to the frame
+    landmarks: list of list of floats
+        Output of the facetracker applied to the frame, 
+        processed into a standard format [[x, y, z], ...].
     offset: int
         Number of pixels to keep around the eyes. Defaults to 5.
     Returns
@@ -87,8 +89,9 @@ def _crop(frame, landmarks, select_set, offset):
     ----------
     frame: np.ndarray/frame loaded by opencv
         The frame to crop.
-    landmarks: mediapipe FaceMesh SolutionOutput
-        Output of the eyetracker applied to the frame
+    landmarks: list of list of floats
+        Output of the facetracker applied to the frame, 
+        processed into a standard format [[x, y, z], ...].
     select_set: list
         Subset of points.
     offset: int
@@ -102,11 +105,11 @@ def _crop(frame, landmarks, select_set, offset):
     min_y = 1
     max_y = 0
     for i in select_set:
-        lmk = landmarks.multi_face_landmarks[0].landmark[i]
-        min_x = lmk.x if lmk.x < min_x else min_x
-        max_x = lmk.x if lmk.x > max_x else max_x
-        min_y = lmk.y if lmk.y < min_y else min_y
-        max_y = lmk.y if lmk.y > max_y else max_y
+        lmk = landmarks[i]
+        min_x = lmk[0] if lmk[0] < min_x else min_x
+        max_x = lmk[0] if lmk[0] > max_x else max_x
+        min_y = lmk[1] if lmk[1] < min_y else min_y
+        max_y = lmk[1] if lmk[1] > max_y else max_y
     h, w, _ = frame.shape
     min_x, max_x = int(min_x*w), int(max_x*w)
     min_y, max_y = int(min_y*h), int(max_y*h)
@@ -166,9 +169,10 @@ def get_detector():
     ----------
     Returns
     -------
-    a MeshFaceDetector object from camerasensor package.
+    a MeshFaceDetector object from lr_facetracker package.
+        Note: detect_iris is set to True, single_image is set to True
     """
-    return MeshFaceDetector(refine_landmarks=True, static_image_mode=True)
+    return MeshFaceDetector(detect_iris=True, single_image=True)
 
 def get_landmarks(frame, detector=None):
     """
@@ -179,15 +183,17 @@ def get_landmarks(frame, detector=None):
     frame: np.ndarray/opencv frame IN RGB FORMAT
         input RGB frame.
     detector: MeshFaceDetector
-        detector already instantiated, or None to produce a new detector.
+        detector already instantiated, or None to create a new detector.
     Returns
     -------
-    
+    landmarks: list of list of floats
+        landmarks extracted from lr_facetracker.detection.MediapipeData,
+        format is [[x, y, z], [x, y, z], ...]
     """
     detector = get_detector() if detector is None else detector
-    landmarks = detector.detect(frame, roi=None)
-    landmarks = detector.postprocess_detections(landmarks)
-    return landmarks
+    raw_detection = detector.detect(frame)
+    mesh_data = detector.postprocess(raw_detection)
+    return mesh_data.get_landmarks()
 
 
 
@@ -210,11 +216,8 @@ if __name__ == "__main__":
     print("Shape after resize=", reshaped.shape)
     h, w, _ = reshaped.shape
     try:
-        for i in range(len(landmarks.multi_face_landmarks[0].landmark)):
-            lmk = landmarks.multi_face_landmarks[0].landmark[i]
-            data.append(lmk.x)
-            data.append(lmk.y)
-            data.append(lmk.z)
+        for i, lmk in enumerate(landmarks):
+            data.extend(lmk)
 
         # Change the set from which selecting the index to display them
         for IDX in V2:

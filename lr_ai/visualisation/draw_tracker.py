@@ -4,15 +4,8 @@ import os
 import numpy as np
 import cv2
 
-from lr_ai.features.tracker_toolbox import get_landmarks, get_detector, V1, V2
+from lr_ai.features.tracker_toolbox import get_detector, V1, V2
 
-def parse_arguments():
-    args = argparse.ArgumentParser("Draw tracker points on an image or video.")
-    args.add_argument("--image", type=str, help="Path to the input image.")
-    args.add_argument("--video", type=str, help="Path to the input video.")
-    args.add_argument("--debug", action="store_true", 
-                      help="Flag to display image(s) instead of saving.")
-    return args.parse_args()
 
 def load_video(path):
     """
@@ -74,22 +67,23 @@ def process_one_frame(frame, detector, background_frame=None):
 
     Args:
         frame (np.ndarray): BGR frame
-        detector (camerasensor.MeshFaceDetector): landmarks detector. 
+        detector (lr_facetracker.detection.MeshFaceDetector): landmarks detector. 
                 Can be obtained using tracker_toolbox.get_detector().
         background_frame (np.ndarray): Frame used for background when drawing the new frame. If None, the main frame is used. Default to None
 
     Returns:
         list[np.ndarray*4]: 4 BGR frames.
     """
+    detection_data = detector.process(frame)
+    landmarks = detection_data.get_landmarks()
     rgb_frame = preprocess_frame(frame)
-    landmarks = get_landmarks(rgb_frame, detector)
     if landmarks is None:
         print("No detections for this frame")
         return
     
     # draw mesh
     frame_mesh = rgb_frame.copy()
-    detector.draw(frame_mesh, landmarks)
+    detector.draw_mesh(frame_mesh, detection_data)
     frame_mesh = postprocess_frame(frame_mesh)
 
     # draw points
@@ -99,28 +93,27 @@ def process_one_frame(frame, detector, background_frame=None):
     frame_v1 = background_frame.copy()
     frame_v2 = background_frame.copy()
     
-    for idx in range(len(landmarks.multi_face_landmarks[0].landmark)):
-        draw_point(frame_v0, landmarks.multi_face_landmarks[0], idx)
+    for idx, lmk in enumerate(landmarks):
+        draw_point(frame_v0, lmk)
         if idx in V1:
-            draw_point(frame_v1, landmarks.multi_face_landmarks[0], idx)
+            draw_point(frame_v1, lmk)
         if idx in V2:
-            draw_point(frame_v2, landmarks.multi_face_landmarks[0], idx)
+            draw_point(frame_v2, lmk)
 
     return [frame_mesh, frame_v0, frame_v1, frame_v2]
 
-def draw_point(frame, landmark_list, num):
+def draw_point(frame, landmark):
     """
     Draw a green dot on the given frame.
 
     Args:
         frame (np.ndarray): BGR image.
-        landmark_list (mediapipe landmarks list): list of landmarks as x-y-z points.
-        num (int): index of the point to draw from the list.
+        landmark (list of floats): landmarks as (x, y, z) points.
     Returns:
         None: `frame` argument is modified.
     """
-    x = int(landmark_list.landmark[num].x*frame.shape[1])
-    y = int(landmark_list.landmark[num].y*frame.shape[0])
+    x = int(landmark[0]*frame.shape[1])
+    y = int(landmark[1]*frame.shape[0])
     cv2.circle(frame, (x, y), 2, color=(0, 225, 0), thickness=-1)
 
 def debug_show(frames_list, wait=True):
@@ -173,6 +166,16 @@ def get_writers_from_cap(cap, input_path):
     print(f"Saving video to {name_v2}")
     
     return [writer_mesh, writer_v0, writer_v1, writer_v2]
+
+
+def parse_arguments():
+    args = argparse.ArgumentParser("Draw tracker points on an image or video.")
+    args.add_argument("--image", type=str, help="Path to the input image.")
+    args.add_argument("--video", type=str, help="Path to the input video.")
+    args.add_argument("--debug", action="store_true", 
+                      help="Flag to display image(s) instead of saving.")
+    return args.parse_args()
+
 
 if __name__ == "__main__":
     args = parse_arguments()

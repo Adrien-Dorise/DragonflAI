@@ -145,7 +145,7 @@ def compare_target_prediction(folder_path, target, prediction, save=False, frame
         crop (str, optional): Crop options used for with the model. Only usefull when original video is used for background. Options are {None, "face", "eyes"}. Default is None
     """
 
-
+    print("TARGET=", target)
     videos = os.listdir(folder_path)
     video = [folder_path+'/'+vid for vid in videos if vid.endswith(".avi")][0]
     metadata_path = video.replace('user', 'metadata').replace('.avi', '.csv')
@@ -165,7 +165,7 @@ def compare_target_prediction(folder_path, target, prediction, save=False, frame
     if crop == "face":
         crop_func = crop_face
     elif crop == "eyes":
-        crop_func == crop_eyes
+        crop_func = crop_eyes
 
     if save:
         writer = get_writer_from_cap(cap, video, "output/output_vid.avi")
@@ -229,7 +229,7 @@ if __name__ == "__main__":
 
 
     if test == "TARGET":
-        path = r"data/val/user 2023-03-22 100754.avi"
+        path = r"data/debug/user 2023-03-21 115306.avi"
         visu_target(path)
 
 
@@ -265,6 +265,6 @@ if __name__ == "__main__":
         
         model.loadModel("models/full_dataset/FCNN_tracker_v2/model1/epoch500_1.json")
         
-        loss, (inputs, targets, outputs) = model.predict(data_set)
+        loss, outputs, (inputs, targets) = model.predict(data_set)
         
         compare_target_prediction(data_path,targets,outputs)
