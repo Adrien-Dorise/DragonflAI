@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name="dragonflai",
-      version="0.8.0",
+      version="0.8.1",
       description="LR Technologies template for articial intelligence related projects",
       author="Adrien Dorise, Edouard Villain, Julia Cohen, Boris Lenseigne",
       author_email="{adorise, evillain, jcohen, blenseigne}@lrtechnologies.fr",

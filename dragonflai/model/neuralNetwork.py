@@ -73,6 +73,22 @@ class NeuralNetwork(nn.Module):
 
         self.model_name =  "NeuralNetwork"
         
+    def _on_epoch_start_time(self, *args, **kwargs):
+        '''callback function for time, called at each epoch's start'''
+        self.start_epoch_t = time.time()
+    
+    def _on_batch_end_time(self, *args, **kwargs):
+        '''callback function, called at each batch's end'''
+        curent_duration_t = time.time() - self.start_epoch_t
+        if self.current_batch_test == self.steps_per_epoch_test:
+            self.duration_t = np.around(curent_duration_t, decimals=2)
+        else:
+            nb_batch_done     = self.current_batch_train + self.current_batch_test
+            total             = (self.steps_per_epoch_train + self.steps_per_epoch_test)
+            ratio = nb_batch_done / total 
+            est = curent_duration_t / ratio
+            self.duration_t = np.around(est - curent_duration_t, decimals=2)
+        
     def _on_epoch_start(self, *args, **kwargs):
         '''callback function, called at each epoch's start'''
         self.architecture.train() 
@@ -225,14 +241,14 @@ class NeuralNetwork(nn.Module):
             if not self.istrain:
                 lr = 0
                     
-            size_bar = column - 115
+            size_bar = column - 122
             i        = (size_bar * (self.current_batch_train + self.current_batch_test) // (self.steps_per_epoch_train + self.steps_per_epoch_test))
             end      = '\r'
             total    = (self.steps_per_epoch_train + self.steps_per_epoch_test) 
             if self.current_batch_test == self.steps_per_epoch_test:
-                est_t = 't ~ {} s.'.format(np.around(self.duration_t * total, decimals=2))
+                est_t = 'time used = {} s.'.format(self.duration_t)
             else:
-                est_t  = 't ~ {} s.'.format(np.around(self.duration_t * (total - (self.current_batch_train + self.current_batch_test)), decimals=2))
+                est_t = 'time left ~ {} s.'.format(self.duration_t)
             
             if verbose == 2:
                 end = '\n'
@@ -306,6 +322,7 @@ class NeuralNetwork(nn.Module):
         self.set_scheduler(None)
         
         for epoch in range(epochs):
+            self._on_epoch_start_time()
             self._on_epoch_start()
             self.init_epoch(loss_indicators=loss_indicators)
             self.plot_log(epoch=epoch, loss=0, val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
@@ -320,6 +337,7 @@ class NeuralNetwork(nn.Module):
                 self.update_scheduler(loss=loss)
                 self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
                 self._on_batch_end()
+                self._on_batch_end_time()
                 
             self.save_epoch_end(epoch=epoch, loss_indicators=loss_indicators, dataset_size=self.dataset_size)
             self._on_epoch_end()
@@ -357,6 +375,7 @@ class NeuralNetwork(nn.Module):
             test_loss.append(loss.item())
             self.current_batch_test += 1 
             if(self.istrain):
+                self._on_batch_end_time()
                 self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), lr=self.opt[0].param_groups[0]['lr'])
             else:
                 print(f"Test loss: {loss}")
