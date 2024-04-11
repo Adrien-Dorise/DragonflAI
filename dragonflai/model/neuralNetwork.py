@@ -208,17 +208,23 @@ class NeuralNetwork(nn.Module):
         
         #See here for detail about multiple scaler & optimizer
         # https://pytorch.org/docs/stable/notes/amp_examples.html#working-with-multiple-models-losses-and-optimizers
+        
+        # scaler scaling 
+        # retain graph set to true in order to get a complete graph 
+        # connecting input to output, even in multi modal cases 
         for idx, scaler in enumerate(self.scaler):
             retain_graph = (idx < len(self.scaler)-1)    
             scaler.scale(loss).backward(retain_graph=retain_graph)    
         
-        for scaler in self.scaler:
-            for opt in self.opt:
-                scaler.step(opt)
+        # step optimizer with its scaler 
+        for i in range(len(self.scaler)):
+            self.scaler[i].step(self.opt[i])
 
+        # update scaler 
         for scaler in self.scaler:
             scaler.update()
         
+        # reset optimizers's gradients  
         for opt in self.opt:
             opt.zero_grad()
 
