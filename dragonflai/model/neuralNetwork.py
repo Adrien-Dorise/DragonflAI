@@ -2,7 +2,7 @@
 This package references all neural network classes used in the application.
 Author: Julia Cohen - Adrien Dorise - Edouard Villain ({jcohen, adorise, evillain}@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Adrien Dorise - November 2023
+Last updated: Edouard Villain - April 2024 
 
 Pytorch is the main API used.
 It is organised as follow:
@@ -188,9 +188,17 @@ class NeuralNetwork(nn.Module):
             
     def loss_calculation(self, crit, inputs, target, *args, **kwargs):
         '''compute loss'''
-        
-        outputs = self.forward(inputs)
-        loss    = crit(outputs, target)
+        # get with_grad parameter 
+        with_grad=kwargs['with_grad']
+        # forward pass with gradient computing 
+        if with_grad:
+            outputs = self.forward(inputs)
+            loss    = crit(outputs, target)
+        else: # forward pass without gradient 
+            with torch.no_grad():
+                pred = self.forward(inputs)
+                loss = self.loss(pred, target)
+                torch.cuda.empty_cache()
         
         return loss, outputs
 
@@ -336,7 +344,7 @@ class NeuralNetwork(nn.Module):
             #for i in range(self.steps_per_epoch):
                 self._on_batch_start()
                 inputs, targets = self.get_batch(sample=sample)
-                loss,_ = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators)
+                loss,_ = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators, with_grad=True)
                 self.update_train_loss(loss, inputs=inputs)
                 
                 self.train_batch(loss=loss)
@@ -373,7 +381,7 @@ class NeuralNetwork(nn.Module):
         inputs, outputs, targets, test_loss = [],[],[],[]
         for batch_ndx, sample in enumerate(test_set):
             input, target = self.get_batch(sample=sample)
-            loss, output = self.loss_calculation(crit, input, target)
+            loss, output = self.loss_calculation(crit, input, target, with_grad=False)
 
             inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
             targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
