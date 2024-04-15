@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 import time 
 import os 
 
- 
+from dragonflai.model.utils import *
 
 
 class NeuralNetwork(nn.Module):
@@ -65,6 +65,8 @@ class NeuralNetwork(nn.Module):
         self.duration_t = 0
         self.istrain    = False
         self.verbosity  = 1
+        
+        self.save_path = '/results'
         
         #If available -> work on GPU
         self.device = torch.device('cuda:0' if is_available() else 'cpu')
@@ -162,7 +164,7 @@ class NeuralNetwork(nn.Module):
         self.scheduler = [None]
         
         if self.scheduler is not None:
-            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.75, patience=10) 
+            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.33, patience=3) 
         
     def update_scheduler(self, *args, **kwargs):
         '''update scheduler'''
@@ -196,8 +198,8 @@ class NeuralNetwork(nn.Module):
             loss    = crit(outputs, target)
         else: # forward pass without gradient 
             with torch.no_grad():
-                pred = self.forward(inputs)
-                loss = self.loss(pred, target)
+                outputs = self.forward(inputs)
+                loss = crit(outputs, target)
                 torch.cuda.empty_cache()
         
         return loss, outputs
@@ -266,7 +268,14 @@ class NeuralNetwork(nn.Module):
             
             if verbose == 2:
                 end = '\n'
-            print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
+            if self.mode == taskType.CLASSIFICATION:
+                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - acc = {:.2f} % - val_acc = {:.2f} % - {}  '.format(epoch,self.epochs,
+                                                                                            self.current_batch_train, self.steps_per_epoch_train,
+                                                                                            self.current_batch_test, self.steps_per_epoch_test,
+                                                                                            '=' * i, ' ' * (size_bar - i),
+                                                                                            lr, loss, val_loss, est_t), end=end)
+            else:
+                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
                                                                                             self.current_batch_train, self.steps_per_epoch_train,
                                                                                             self.current_batch_test, self.steps_per_epoch_test,
                                                                                             '=' * i, ' ' * (size_bar - i),
@@ -286,13 +295,13 @@ class NeuralNetwork(nn.Module):
             self.losses_train[i].append(self.epoch_losses[i])        
             
         if epoch % 100 == 0: #Save model every X epochs
-            self.saveModel(f"models/tmp/epoch{epoch}")
+            self.saveModel(f"{self.save_path}/epoch{epoch}")
             
         try:  
             if self.losses_train[0][-1] == np.min(self.losses_train[0]):
-                self.saveModel("./models/tmp/{}_best_train".format(self.model_name, epoch))
+                self.saveModel("{}/{}_best_train".format({self.save_path}, self.model_name))
             if self.losses_val[-1] == np.min(self.losses_val):
-                self.saveModel("./models/tmp/{}_best_val".format(self.model_name, epoch))
+                self.saveModel("{}/{}_best_val".format(self.save_path, self.model_name))
         except:
             pass 
                 
@@ -334,7 +343,9 @@ class NeuralNetwork(nn.Module):
         self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
         self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
         self.set_scheduler(None)
-        
+        total_correct = 0
+        total_instances = 0
+        self.acc = 0#round(total_correct/total_instances, 2) * 100 
         for epoch in range(epochs):
             self._on_epoch_start_time()
             self._on_epoch_start()
@@ -344,12 +355,22 @@ class NeuralNetwork(nn.Module):
             #for i in range(self.steps_per_epoch):
                 self._on_batch_start()
                 inputs, targets = self.get_batch(sample=sample)
-                loss,_ = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators, with_grad=True)
+                if epoch == 0 and self.current_batch_train == 0: #Print network architecture
+                    draw_graph(self, input_data=inputs, save_graph=True,directory=self.save_path,expand_nested=True, depth=3)
+                loss,pred = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators, with_grad=True)
+                if self.mode == taskType.CLASSIFICATION:
+                    classifications = torch.argmax(pred, dim=1)
+                    correct_predictions = sum(classifications==targets).item()
+                    total_correct+=correct_predictions
+                    total_instances+=len(inputs)
+                    self.acc = round(total_correct/total_instances, 4) * 100
                 self.update_train_loss(loss, inputs=inputs)
                 
                 self.train_batch(loss=loss)
-                self.update_scheduler(loss=loss)
-                self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
+                if self.mode == taskType.CLASSIFICATION:
+                    self.plot_log(epoch=epoch, loss=self.acc, val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
+                else:
+                    self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
                 self._on_batch_end()
                 self._on_batch_end_time()
                 
@@ -357,6 +378,7 @@ class NeuralNetwork(nn.Module):
             self._on_epoch_end()
             val_loss, _, _ = self.predict(valid_set, crit=criterion, loss_indicators=1, epoch=epoch, train_loss=np.mean(self.batch_loss))
             self.losses_val.append(val_loss)
+            self.update_scheduler(loss=val_loss)
         
         self._on_training_end()
         self.istrain = False
@@ -378,6 +400,9 @@ class NeuralNetwork(nn.Module):
             [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
         self._on_predict_start()
+        total_correct = 0
+        total_instances = 0
+        self.val_acc = 0 
         inputs, outputs, targets, test_loss = [],[],[],[]
         for batch_ndx, sample in enumerate(test_set):
             input, target = self.get_batch(sample=sample)
@@ -386,13 +411,20 @@ class NeuralNetwork(nn.Module):
             inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
             targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
             outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
-            test_loss.append(loss.item())
+            test_loss.append(loss.item()) 
+            
             self.current_batch_test += 1 
-            if(self.istrain):
-                self._on_batch_end_time()
-                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), lr=self.opt[0].param_groups[0]['lr'])
+            self._on_batch_end_time()
+            if self.mode == taskType.CLASSIFICATION:
+                classifications = torch.argmax(output, dim=1)
+                correct_predictions = sum(classifications==target).item()
+                total_correct+=correct_predictions
+                total_instances+=len(input)
+                self.val_acc = round(total_correct/total_instances, 4) * 100
+            
+                self.plot_log(epoch=epoch, loss=self.acc, val_loss=self.val_acc, lr=self.opt[0].param_groups[0]['lr'])
             else:
-                print(f"Test loss: {loss}")
+                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), lr=self.opt[0].param_groups[0]['lr'])
 
         mean_loss = np.mean(test_loss)
         self._on_predict_end()
@@ -466,8 +498,8 @@ class NeuralNetwork(nn.Module):
         
         # displaying the title
         plt.title("Loss training")
-        plt.show()
-        fig.savefig("models/tmp/loss_history.png")
+        #plt.show()
+        fig.savefig("{}/loss_history.png".format(self.save_path))
         
     def printArchitecture(self, input_shape):
         """Display neural netwotk architecture
@@ -482,67 +514,3 @@ class NeuralNetwork(nn.Module):
         print(f"Input shape: {input_shape}")
         summary(self, input_shape)
         print("\n")
-
-
-
-
-
-if __name__ == "__main__":
-    #!!! TEST SCRIPT !!!
-    TEST = "NN"
-    if TEST == "NN": 
-        import lr_ai.features.preprocessing as pr
-        import lr_ai.features.preprocessing as imgpr
-        from lr_ai.model.neural_network_architectures.FCNN import *
-        from lr_ai.model.neural_network_architectures.CNN import *
-        from lr_ai.model.neural_network_architectures.temporal import *        
-        from lr_ai.config.NN_config import *
-        from lr_ai.config.data_config import *
-        
-        
-
-        train_path = val_path = test_path = "data/Debug"
-        #model.printArchitecture((batch_size,3,224,224) if seq_length == 0 else (batch_size,1,3,224,224))
-        
-        # !!! Init !!!
-        temporal = (seq_length != 0)
-
-        # Use 1 if crop = None, 0 otherwise (segmentation fault in dataloader if other values)
-        if crop is not None:
-            nb_workers = 0 
-        else:
-            nb_workers = 1
-        nb_workers=0
-        
-        #!!! Load data set !!!     
-        
-        if(input_type == InputType.TRACKER):
-            train_set, scaler = pr.loader(train_path, shuffle = True, batch_size=batch_size, scaler=scaler, coords=coords, tracker_version=tracker_version, temporal=temporal, sequence_length=seq_length)
-            val_set,_ = pr.loader(val_path, shuffle = True, batch_size=batch_size, scaler=scaler, coords=coords, tracker_version=tracker_version, temporal=temporal,sequence_length=seq_length)
-            test_set,_ = pr.loader(test_path, shuffle = True, batch_size=batch_size, scaler=scaler, coords=coords, tracker_version=tracker_version, temporal=temporal,sequence_length=seq_length)
-        else:
-            train_set = imgpr.img_loader(train_path,True,batch_size=batch_size,crop=crop,shuffle=False,temporal=temporal,sequence_length=seq_length)
-            val_set = imgpr.img_loader(val_path,False,batch_size=batch_size,crop=crop,shuffle=False,temporal=temporal,sequence_length=seq_length)
-            test_set = imgpr.img_loader(test_path,False,batch_size=batch_size,crop=crop,shuffle=False,temporal=temporal,sequence_length=seq_length)
-        
-
-
-
-        #!!! Training!!! 
-        losses_train, losses_val = NN_model.fit(train_set,
-        num_epoch, 
-        criterion=crit, 
-        optimizer=optimizer,
-        learning_rate=lr,
-        weight_decay=wd, 
-        valid_set=val_set)
-
-        NN_model.saveModel(f"models/tmp/NN_epoch{num_epoch}")
-        NN_model.plotLoss(losses_train,losses_val)
-        
-
-        #!!! Testing !!!
-        #model.loadModel('models/LSTM2_1.json')
-        score, out = NN_model.predict(test_set)
-        print(f"Test loss: {score}")
-
