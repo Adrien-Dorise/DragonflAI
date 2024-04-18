@@ -127,10 +127,9 @@ class VIT_MNIST(NeuralNetwork):
                  n_layers, n_attention_heads, 
                  forward_mul, image_size, 
                  patch_size, n_classes):
-        super().__init__()
+        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.CLASSIFICATION)
         
         self.architecture = VisionTransformer(n_channels, embed_dim, 
                                                 n_layers, n_attention_heads, 
                                                 forward_mul, image_size, patch_size, 
                                                 n_classes).to(self.device)
-        self.mode = taskType.CLASSIFICATION
