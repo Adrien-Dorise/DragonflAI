@@ -17,6 +17,7 @@ import sklearn.metrics as metrics
 import joblib
 import numpy as np
 import pandas as pd
+import os
 
 
 class Regressor():
@@ -215,6 +216,14 @@ class Regressor():
         Args:
             path (string): file path without the model type and extension
         """
+
+        #Check if folder exists
+        file_name = path.split("/")[-1]
+        folder_path = path[0:-len(file_name)]
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+
         iter = 0
         for mod in self.model:
             joblib.dump(mod,f"{path}_{self.choice}{iter}.sav")
@@ -227,10 +236,12 @@ class Regressor():
             path (string): file path without the model type and extension (ex: modelFoder/name instead of modelFolder/name_KNN1.sav)
         """
         iter = 0
-        for i in range(len(self.model)): #Can't use enumarator call as it creates a copy of self.model
-            self.model[i] = joblib.load(f"{path}_{self.choice}{iter}.sav")
-            iter+=1
-            
+        try:
+            for i in range(len(self.model)): #Can't use enumarator call as it creates a copy of self.model
+                self.model[i] = joblib.load(f"{path}_{self.choice}{iter}.sav")
+                iter+=1
+        except Exception:
+            raise Exception(f"Error when loading Machine Learning model: {path}_{self.choice}{iter}.sav not found")    
 
 
 if __name__ == "__main__":

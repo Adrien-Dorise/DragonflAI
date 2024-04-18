@@ -457,12 +457,18 @@ class NeuralNetwork(nn.Module):
             epoch (int | None): completed training epoch
         """
 
+        #Check if folder exists
+        file_name = path.split("/")[-1]
+        folder_path = path[0:-len(file_name)]
+        if not exists(folder_path):
+            os.makedirs(folder_path)
+        
+        #Check if file exists
         iterator = 1
         while(exists(path + str(iterator) + ".json")):
             iterator+=1
 
         torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
-        #print("Saved model to " + path + "_" + str(iterator))
         
         
     def loadModel(self, path):    
@@ -471,10 +477,12 @@ class NeuralNetwork(nn.Module):
         Args:
             path (string): file path to load without extension
         """
-        
-        self.architecture.load_state_dict(torch.load(path + ".json", map_location=self.device))
-        self.architecture.to(self.device)
-        print("Loaded model from disk")
+        try:
+            self.architecture.load_state_dict(torch.load(path + ".json", map_location=self.device))
+            self.architecture.to(self.device)
+            print("Loaded model from disk")
+        except Exception:
+            raise Exception(f"Error when loading Neural Network model: {path} not found")
         
 
     def plotLoss(self, loss_train, loss_val):
