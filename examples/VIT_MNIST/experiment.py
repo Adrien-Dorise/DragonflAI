@@ -38,21 +38,24 @@ class Experiment():
         """Train the model using the data available in the train and validation folder path.
         """
 
-        losses_train, losses_val = self.model.fit(self.train_loader,
+        history = self.model.fit(self.train_loader,
         self.num_epoch, 
         criterion=self.criterion, 
         optimizer=self.optimizer,
         learning_rate=self.learning_rate,
         weight_decay=self.weight_decay, 
         valid_set=self.test_loader,
-        loss_indicators=1)
-        self.model.plotLoss(losses_train,losses_val)
+        loss_indicators=1, 
+        batch_size=self.batch_size)
+        self.model.plot_learning_curve(history.loss_train,history.loss_val, 'loss')
+        self.model.plot_learning_curve(history.acc_train,history.acc_val, 'accuracy')
+        self.model.plot_learning_rate(history.lr, 'lr')
 
     def predict(self):          
         """Model prediction on the samples available in the test folder path
         """
         # !!! Data loading !!!
-        score, prediction, _ = self.model.predict(self.test_loader,self.criterion)
+        _, _, _ = self.model.predict(self.test_loader,self.criterion)
 
 
 
@@ -61,13 +64,13 @@ class Experiment():
         The input + predicted images are both shown.
         """
         # !!! Data loading !!!
-        
-        score, pred, (feature, target) = self.model.predict(self.test_loader,self.criterion)
+        self.model.history.verbosity = 0
+        _, pred, (_, target) = self.model.predict(self.test_loader,self.criterion)
         print('\nCONFUSION MATRIX : \n\n')
         cm = confusion_matrix(target, torch.argmax(torch.tensor(pred), dim=1))
         print(cm)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-        disp.plot().figure_.savefig('/home/dr-evil/dev_dragonflAI/history/dragonflai/examples/VIT_MNIST/results/CM.png')
+        disp.plot().figure_.savefig('{}/CM.png'.format(self.model.save_path))
         
         
     

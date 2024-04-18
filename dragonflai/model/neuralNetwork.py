@@ -18,24 +18,14 @@ The package works as follow:
 """
 
 from os.path import exists
-from tqdm import tqdm
-
-import torchvision
-from torchvision.transforms import Compose, ToTensor, Normalize
-from torchvision.datasets import CIFAR10
-from torch.utils.data import DataLoader
-from torch.optim import SGD, Adam, AdamW
-from torch.cuda import is_available
 from torchinfo import summary
 from torchview import draw_graph
 
 import torch.nn as nn
 import torch
-from torch.cuda import amp  
 import numpy as np
 import matplotlib.pyplot as plt
 import time 
-import os 
 
 from dragonflai.model.utils import *
 
@@ -58,93 +48,42 @@ class NeuralNetwork(nn.Module):
         print(f"Test loss: {score}")
     """
     
-    def __init__(self, inputs=1023, outputs=2):
+    def __init__(self, modelType, taskType, name='NeuralNetwork'):
         super().__init__()
-        self.outputs    = outputs
-        self.inputs     = inputs
-        self.duration_t = 0
-        self.istrain    = False
-        self.verbosity  = 1
-        
-        self.save_path = '/results'
-        
+        self.use_gpu = torch.cuda.is_available()
+        self.save_path   = './results'
+        self.history     = dragonflAI_History(modelType, taskType)
+        self.progressBar = dragonflAI_ProgressBar(self.history)
         #If available -> work on GPU
-        self.device = torch.device('cuda:0' if is_available() else 'cpu')
+        self.device = torch.device('cuda:0' if self.use_gpu else 'cpu')
         print(f"Pytorch is setup on: {self.device}")
+        
         self.architecture = nn.Sequential().to(self.device)
-
-        self.model_name =  "NeuralNetwork"
+        self.model_name =  name
         
-    def _on_epoch_start_time(self, *args, **kwargs):
-        '''callback function for time, called at each epoch's start'''
-        self.start_epoch_t = time.time()
-    
-    def _on_batch_end_time(self, *args, **kwargs):
-        '''callback function, called at each batch's end'''
-        curent_duration_t = time.time() - self.start_epoch_t
-        if self.current_batch_test == self.steps_per_epoch_test:
-            self.duration_t = np.around(curent_duration_t, decimals=2)
-        else:
-            nb_batch_done     = self.current_batch_train + self.current_batch_test
-            total             = (self.steps_per_epoch_train + self.steps_per_epoch_test)
-            ratio = nb_batch_done / total 
-            est = curent_duration_t / ratio
-            self.duration_t = np.around(est - curent_duration_t, decimals=2)
         
-    def _on_epoch_start(self, *args, **kwargs):
-        '''callback function, called at each epoch's start'''
-        self.architecture.train() 
-        self.current_batch_train = 0
         
-    def _on_predict_start(self, *args, **kwargs):
-        '''callback function, called at each predict start'''
-        self.architecture.eval()
-        self.current_batch_test = 0
-        
-    def _on_predict_end(self, *args, **kwargs):
-        '''callback function, called at each predict end'''
-        pass 
     
-    def _on_epoch_end(self, *args, **kwargs):
-        '''callback function, called at each epoch's end'''
-        pass 
     
-    def _on_batch_start(self, *args, **kwargs):
-        '''callback function, called at each batch's start'''
-        self.start_t = time.time()
-    
-    def _on_batch_end(self, *args, **kwargs):
-        '''callback function, called at each batch's end'''
-        self.duration_t = time.time() - self.start_t
-    
-    def _on_training_start(self, *args, **kwargs):
-        '''callback function, called at training start'''
-        print('\tStart training...') 
-    
-    def _on_training_end(self, *args, **kwargs):
-        '''callback function, called at training end'''
-        print('\tEnd training...')
 
     def init_results(self, loss_indicators, train_loader, test_loader, batch_size, epochs, *args, **kwargs):
-        self.use_gpu=False
         #Use GPU if available
-        if torch.cuda.is_available():
+        if self.use_gpu:
             print("CUDA compatible GPU found")
-            self.use_gpu=True
         else:
             print("No CUDA compatible GPU found")
         
-        self.all_loss              = []
-        self.losses_train          = [[] for _ in range(loss_indicators)]
-        self.losses_val            = []
-        self.dataset_size          = len(train_loader) * batch_size
-        self.steps_per_epoch_train = len(train_loader)
-        self.steps_per_epoch_test  = len(test_loader)
-        self.epochs                = epochs
-        self.batch_size            = batch_size
+        parameters = {
+            'nb_max_epochs'        : epochs,
+            'batch_size'           : batch_size,
+            'dataset_size'         : len(train_loader) * batch_size,
+            'steps_per_epoch_train': len(train_loader),
+            'steps_per_epoch_val'  : len(test_loader),
+            }
+        self.history.set_new_parameters(parameters)
 
     def set_optimizer(self, 
-                      optimizer=AdamW, 
+                      optimizer=torch.optim.AdamW, 
                       learning_rate=1e-4, 
                       weight_decay=1e-4, 
                       *args, **kwargs):
@@ -157,14 +96,14 @@ class NeuralNetwork(nn.Module):
                             weight_decay=weight_decay)
         
         self.scaler = [None]
-        self.scaler[0] = amp.GradScaler(enabled=self.use_gpu)
+        self.scaler[0] = torch.cuda.amp.GradScaler(enabled=self.use_gpu)
         
-    def set_scheduler(self, scheduler=None, *args, **kwargs):
+    def set_scheduler(self, opt, scheduler=None, *args, **kwargs):
         '''set scheduler'''
         self.scheduler = [None]
         
         if self.scheduler is not None:
-            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.33, patience=3) 
+            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.33, patience=1) 
         
     def update_scheduler(self, *args, **kwargs):
         '''update scheduler'''
@@ -173,15 +112,6 @@ class NeuralNetwork(nn.Module):
             for scheduler in self.scheduler:
                 scheduler.step(loss)
 
-    def init_epoch(self, *args, **kwargs):
-        '''init epoch'''
-        loss_indicators   = kwargs['loss_indicators']
-        self.running_loss = [0 for _ in range(loss_indicators)]
-        for opt in self.opt:
-            opt.zero_grad()
-        self.batch_loss    = [[] for _ in range(loss_indicators)]
-        self.current_batch_train = 0
-        self.current_batch_test = 0
     
     def get_batch(self, *args, **kwargs):
         '''get batch'''
@@ -199,18 +129,10 @@ class NeuralNetwork(nn.Module):
         else: # forward pass without gradient 
             with torch.no_grad():
                 outputs = self.forward(inputs)
-                loss = crit(outputs, target)
+                loss    = crit(outputs, target)
                 torch.cuda.empty_cache()
         
         return loss, outputs
-
-    def update_train_loss(self, loss, *args, **kwargs):
-        '''Update the loss during train'''
-        inputs = kwargs["inputs"]
-        
-        for i in range(len(self.batch_loss)):
-            self.batch_loss[i].append([loss][i].cpu().item())
-            self.running_loss[i] += [loss][i].item() * inputs.size(0)                
 
     def train_batch(self, *args, **kwargs):
         '''train a batch '''
@@ -238,93 +160,28 @@ class NeuralNetwork(nn.Module):
         for opt in self.opt:
             opt.zero_grad()
 
-        self.current_batch_train += 1
-
-    def plot_log(self, *args, **kwargs):
-        '''plot log during training'''
-        
-        if self.verbosity > 0:
-            epoch    = kwargs['epoch']
-            loss     = kwargs['loss']
-            val_loss = kwargs['val_loss']
-            lr       = kwargs['lr']
-            
-            column, _ = os.get_terminal_size()
-            verbose = self.verbosity
-            if self.current_batch_test == self.steps_per_epoch_test:
-                verbose = 2
-                
-            if not self.istrain:
-                lr = 0
-                    
-            size_bar = column - 122
-            i        = (size_bar * (self.current_batch_train + self.current_batch_test) // (self.steps_per_epoch_train + self.steps_per_epoch_test))
-            end      = '\r'
-            total    = (self.steps_per_epoch_train + self.steps_per_epoch_test) 
-            if self.current_batch_test == self.steps_per_epoch_test:
-                est_t = 'time used = {} s.'.format(self.duration_t)
-            else:
-                est_t = 'time left ~ {} s.'.format(self.duration_t)
-            
-            if verbose == 2:
-                end = '\n'
-            if self.mode == taskType.CLASSIFICATION:
-                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - acc = {:.2f} % - val_acc = {:.2f} % - {}  '.format(epoch,self.epochs,
-                                                                                            self.current_batch_train, self.steps_per_epoch_train,
-                                                                                            self.current_batch_test, self.steps_per_epoch_test,
-                                                                                            '=' * i, ' ' * (size_bar - i),
-                                                                                            lr, loss, val_loss, est_t), end=end)
-            else:
-                print('[{:4d}/{:4d}, {:4d}/{:4d}, {:4d}/{:4d}] : [{}>{}] : lr = {:.3e} - loss = {:.3e} - val = {:.3e} - {}  '.format(epoch,self.epochs,
-                                                                                            self.current_batch_train, self.steps_per_epoch_train,
-                                                                                            self.current_batch_test, self.steps_per_epoch_test,
-                                                                                            '=' * i, ' ' * (size_bar - i),
-                                                                                            lr, loss, val_loss, est_t), end=end)
-
-    def save_epoch_end(self, *args, **kwargs):
-        epoch           = kwargs['epoch']
-        loss_indicators = kwargs['loss_indicators']
-        dataset_size    = kwargs['dataset_size']
-        
-        #if epoch == 0: #Print network architecture
-        #    draw_graph(self.architecture, input_data=inputs, save_graph=True,directory="models/tmp/")
-
-        self.epoch_losses = [[] for _ in range(loss_indicators)]
-        for i in range(loss_indicators):
-            self.epoch_losses[i] = self.running_loss[i] / dataset_size
-            self.losses_train[i].append(self.epoch_losses[i])        
-            
-        if epoch % 100 == 0: #Save model every X epochs
-            self.saveModel(f"{self.save_path}/epoch{epoch}")
+    def save_epoch_end(self, *args, **kwargs):   
+        if self.history.current_status['current_epoch'] % 100 == 0: #Save model every X epochs
+            self.saveModel(f"{self.save_path}/epoch{self.history.current_status['current_epoch']}")
             
         try:  
-            if self.losses_train[0][-1] == np.min(self.losses_train[0]):
+            if self.history.loss_train[-1] == np.min(self.history.loss_train):
                 self.saveModel("{}/{}_best_train".format({self.save_path}, self.model_name))
-            if self.losses_val[-1] == np.min(self.losses_val):
+            if self.history.loss_val[-1] == np.min(self.history.loss_val):
                 self.saveModel("{}/{}_best_val".format(self.save_path, self.model_name))
         except:
             pass 
-                
         
-    def update_outputs(self):
-        """Change the last layer of the network to match the desired number of outputs.
-        
-        """
-        assert isinstance(self.architecture, nn.Sequential), \
-            "update_outputs needs to be overriden if architecture is not a Sequential module"
-        in_features = self.architecture[-1].in_features
-        bias = self.architecture[-1].bias is not None
-        new_fc = nn.Linear(in_features=in_features, out_features=self.outputs, bias=bias)
-        self.architecture[-1] = new_fc.to(self.device)
     
     def fit(self, train_set, epochs, 
-            criterion=nn.L1Loss(), 
-            optimizer=Adam, 
-            learning_rate=0.001, 
-            weight_decay=None, 
-            valid_set=None,
-            loss_indicators=1, 
-            batch_size=2):
+            criterion       = nn.L1Loss(),
+            optimizer       = torch.optim.Adam,
+            learning_rate   = 0.001,
+            weight_decay    = None,
+            valid_set       = None,
+            loss_indicators = 1,
+            batch_size      = 2
+            ):
         """Train a model on a training set
         print(f"Pytorch is setup on: {self.device}")
 
@@ -338,54 +195,40 @@ class NeuralNetwork(nn.Module):
             valid_set (torch.utils.data.DataLoader): Validation set used to verify model learning. Not mandatory (default = None)
             loss_indicators (int): Number of loss indicators used during training. Most NN only need one indicator, but distillation models need three (loss, loss_trainer, loss_student). (default = 1)
         """
-        self.istrain = True
+        # training starting callback 
         self._on_training_start()
+        # init results 
         self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
         self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
-        self.set_scheduler(None)
-        total_correct = 0
-        total_instances = 0
-        self.acc = 0#round(total_correct/total_instances, 2) * 100 
-        for epoch in range(epochs):
-            self._on_epoch_start_time()
-            self._on_epoch_start()
-            self.init_epoch(loss_indicators=loss_indicators)
-            self.plot_log(epoch=epoch, loss=0, val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
-            for batch_ndx, sample in enumerate(train_set):
-            #for i in range(self.steps_per_epoch):
-                self._on_batch_start()
-                inputs, targets = self.get_batch(sample=sample)
-                if epoch == 0 and self.current_batch_train == 0: #Print network architecture
-                    draw_graph(self, input_data=inputs, save_graph=True,directory=self.save_path,expand_nested=True, depth=3)
-                loss,pred = self.loss_calculation(criterion, inputs, targets, loss_indicators=loss_indicators, with_grad=True)
-                if self.mode == taskType.CLASSIFICATION:
-                    classifications = torch.argmax(pred, dim=1)
-                    correct_predictions = sum(classifications==targets).item()
-                    total_correct+=correct_predictions
-                    total_instances+=len(inputs)
-                    self.acc = round(total_correct/total_instances, 4) * 100
-                self.update_train_loss(loss, inputs=inputs)
-                
-                self.train_batch(loss=loss)
-                if self.mode == taskType.CLASSIFICATION:
-                    self.plot_log(epoch=epoch, loss=self.acc, val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
-                else:
-                    self.plot_log(epoch=epoch, loss=np.mean(self.batch_loss), val_loss=0, lr=self.opt[0].param_groups[0]['lr'])
-                self._on_batch_end()
-                self._on_batch_end_time()
-                
-            self.save_epoch_end(epoch=epoch, loss_indicators=loss_indicators, dataset_size=self.dataset_size)
-            self._on_epoch_end()
-            val_loss, _, _ = self.predict(valid_set, crit=criterion, loss_indicators=1, epoch=epoch, train_loss=np.mean(self.batch_loss))
-            self.losses_val.append(val_loss)
-            self.update_scheduler(loss=val_loss)
+        self.set_scheduler(1)
         
+        # iterate throw epochs 
+        for _ in range(epochs):
+            # starting epoch callback 
+            self._on_epoch_start()
+            # iterate throw batch 
+            for _, sample in enumerate(train_set):
+                # get batch 
+                inputs, targets = self.get_batch(sample=sample)
+                # forward batch with training 
+                _, _ = self.forward_batch(inputs, targets, criterion, train=True)
+            # update history 
+            self.history._end_train_epoch(loss=np.mean(self.batch_loss), 
+                                                lr=self.opt[0].param_groups[0]['lr'], 
+                                                acc=self.acc)
+            # predict on validation set 
+            val_loss, _, _ = self.predict(valid_set, crit=criterion, loss_indicators=1)
+            # update sheduler on validation set 
+            self.update_scheduler(loss=val_loss)
+            # ending epoch callback 
+            self._on_epoch_end()
+        # ending training callback 
         self._on_training_end()
         self.istrain = False
-        return self.losses_train, self.losses_val
+        return self.history
 
 
-    def predict(self, test_set, crit=nn.L1Loss(), loss_indicators=1, epoch=0, train_loss=0):
+    def predict(self, test_set, crit=nn.L1Loss(), loss_indicators=1):
         """Use the trained model to predict a target values on a test set
         
         For now, we assume that the target value is known, so it is possible to calculate an error value.
@@ -399,37 +242,60 @@ class NeuralNetwork(nn.Module):
             output (list): Model prediction on the test set
             [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
+        # predict starting callback 
         self._on_predict_start()
-        total_correct = 0
-        total_instances = 0
-        self.val_acc = 0 
-        inputs, outputs, targets, test_loss = [],[],[],[]
-        for batch_ndx, sample in enumerate(test_set):
+        # init list 
+        self.inputs, self.outputs, self.targets, self.test_loss = [],[],[],[]
+        # iterate validation set 
+        for _, sample in enumerate(test_set):
+            # get batch 
             input, target = self.get_batch(sample=sample)
-            loss, output = self.loss_calculation(crit, input, target, with_grad=False)
-
-            inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
-            targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
-            outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
-            test_loss.append(loss.item()) 
-            
-            self.current_batch_test += 1 
-            self._on_batch_end_time()
-            if self.mode == taskType.CLASSIFICATION:
-                classifications = torch.argmax(output, dim=1)
-                correct_predictions = sum(classifications==target).item()
-                total_correct+=correct_predictions
-                total_instances+=len(input)
-                self.val_acc = round(total_correct/total_instances, 4) * 100
-            
-                self.plot_log(epoch=epoch, loss=self.acc, val_loss=self.val_acc, lr=self.opt[0].param_groups[0]['lr'])
-            else:
-                self.plot_log(epoch=epoch, loss=train_loss, val_loss=np.mean(test_loss), lr=self.opt[0].param_groups[0]['lr'])
-
-        mean_loss = np.mean(test_loss)
+            # forward batch without training 
+            _, _ = self.forward_batch(input, target, crit, train=False)
+        # predict ending callback 
         self._on_predict_end()
-        return mean_loss, np.asarray(outputs), [np.asarray(inputs), np.asarray(targets)]
-      
+        
+        return np.mean(self.test_loss), np.asarray(self.outputs), [np.asarray(self.inputs), np.asarray(self.targets)]
+
+
+    def forward_batch(self, input, target, crit, train):
+        # start batch callback 
+        self._on_batch_start()
+        # forward pass and get loss 
+        loss, output = self.loss_calculation(crit, input, target, with_grad=train)
+        # training mode 
+        if train:
+            # at first batch of first epoch : draw model in png 
+            if self.history.current_status['current_epoch'] == 1 and \
+                self.history.current_status['current_batch_train'] == 0: #Print network architecture
+                draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
+            # add current batch loss 
+            self.batch_loss.append(loss.cpu().item())
+            # backward pass 
+            self.train_batch(loss=loss)
+            # update accuracy if needed 
+            if self.history.taskType == taskType.CLASSIFICATION:
+                self._update_acc(output, target)
+            # update history 
+            self.history._end_train_batch(lr=self.opt[0].param_groups[0]['lr'], 
+                                            current_loss_train=np.mean(self.batch_loss),
+                                            current_acc_train=self.acc)
+        else: # validating mode 
+            # add current test loss 
+            self.test_loss.append(loss.item()) 
+            # get input, target, ouput as array 
+            self.inputs.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
+            # update accuracy if needed 
+            if self.history.taskType == taskType.CLASSIFICATION:
+                self._update_acc(output, target, val=True)
+            # update history 
+            self.history._end_val_batch(current_loss_val=np.mean(self.test_loss), current_acc_val=self.acc_val)
+        # ending batch callback 
+        self._on_batch_end()
+                    
+        return loss, output 
         
     def forward(self, data):
         """Forward propagation.
@@ -485,29 +351,51 @@ class NeuralNetwork(nn.Module):
             raise Exception(f"Error when loading Neural Network model: {path} not found")
         
 
-    def plotLoss(self, loss_train, loss_val):
+    def plot_learning_curve(self, train, val, name):
         """Plot the loss after training and save it in folder.
 
         Args:
             loss_train (list of list): loss values collected on train set
             loss_val (list): loss values collected on validation set
         """
-        loss_train = loss_train[0]
         fig = plt.figure()
-        plt.plot(loss_train, color='blue')
-        plt.plot(loss_val, color='red')
+        plt.plot(train, color='blue')
+        plt.plot(val, color='red')
 
         plt.legend(["Training", "Validation"])
 
         plt.xlabel('epoch')
-        plt.ylabel('loss')
+        plt.ylabel(name)
 
         plt.grid(True)
         
         # displaying the title
-        plt.title("Loss training")
+        plt.title("{} training".format(name))
         #plt.show()
-        fig.savefig("{}/loss_history.png".format(self.save_path))
+        fig.savefig("{}/{}_history.png".format(self.save_path, name))
+        
+        
+    def plot_learning_rate(self, lr, name):
+        """Plot the loss after training and save it in folder.
+
+        Args:
+            loss_train (list of list): loss values collected on train set
+            loss_val (list): loss values collected on validation set
+        """
+        fig = plt.figure()
+        plt.plot(lr, color='blue')
+
+        plt.legend(["Learning rate"])
+
+        plt.xlabel('epoch')
+        plt.ylabel(name)
+
+        plt.grid(True)
+        
+        # displaying the title
+        plt.title("{} training".format(name))
+        #plt.show()
+        fig.savefig("{}/{}_history.png".format(self.save_path, name))
         
     def printArchitecture(self, input_shape):
         """Display neural netwotk architecture
@@ -522,3 +410,75 @@ class NeuralNetwork(nn.Module):
         print(f"Input shape: {input_shape}")
         summary(self, input_shape)
         print("\n")
+        
+        
+        
+        
+    ########### Callback methods        
+    def _update_acc(self, output, target, val=False):
+        classifications     = torch.argmax(output, dim=1)
+        correct_predictions = sum(classifications==target).item()
+        if val:
+            self.total_correct_val   += correct_predictions
+            self.total_instances_val += self.history.parameters['batch_size']
+            self.acc_val              = (self.total_correct_val/self.total_instances_val) * 100
+        else:
+            self.total_correct   += correct_predictions
+            self.total_instances += self.history.parameters['batch_size']
+            self.acc              = (self.total_correct/self.total_instances) * 100
+                
+    def _on_batch_end_time(self, *args, **kwargs):
+        '''callback function, called at each batch's end'''
+        curent_duration_t = time.time() - self.history.current_status['start_epoch_t']
+        if self.history.current_status['current_batch_val'] == \
+            self.history.parameters['steps_per_epoch_val']:
+            self.history.set_current_status('duration_t', np.around(curent_duration_t, decimals=2))
+        else:
+            nb_batch_done   = self.history.current_status['current_batch_train'] + self.history.current_status['current_batch_val']
+            total           = self.history.parameters['steps_per_epoch_train'] + self.history.parameters['steps_per_epoch_val']
+            ratio           = nb_batch_done / total
+            est             = curent_duration_t / ratio
+            self.history.set_current_status('duration_t', np.around(est - curent_duration_t, decimals=2))
+        
+    def _on_epoch_start(self, *args, **kwargs):
+        '''callback function, called at each epoch's start'''
+        self.architecture.train() 
+        self.batch_loss          = []
+        self.total_correct       = 0
+        self.total_instances     = 0
+        self.acc                 = 0
+        self.total_correct_val   = 0
+        self.total_instances_val = 0
+        self.acc_val             = 0
+        self.history._start_epoch()
+        self.progressBar.plot_log()
+        
+    def _on_predict_start(self, *args, **kwargs):
+        '''callback function, called at each predict start'''
+        self.architecture.eval()
+        self.history.set_current_status('current_batch_test', 0)
+        
+    def _on_predict_end(self, *args, **kwargs):
+        '''callback function, called at each predict end'''
+        self.history._end_val_epoch(loss=np.mean(self.test_loss), acc=self.acc_val) 
+    
+    def _on_epoch_end(self, *args, **kwargs):
+        '''callback function, called at each epoch's end'''
+        self.save_epoch_end() 
+    
+    def _on_batch_start(self, *args, **kwargs):
+        '''callback function, called at each batch's start'''
+        pass 
+    
+    def _on_batch_end(self, *args, **kwargs):
+        '''callback function, called at each batch's end'''
+        self._on_batch_end_time()
+        self.progressBar.plot_log()
+    
+    def _on_training_start(self, *args, **kwargs):
+        '''callback function, called at training start'''
+        print('\tStart training...') 
+    
+    def _on_training_end(self, *args, **kwargs):
+        '''callback function, called at training end'''
+        print('\tEnd training...')

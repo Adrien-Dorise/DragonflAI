@@ -26,17 +26,18 @@ if __name__ == "__main__":
     embed_dim = 64 
     n_layers = 8
     n_attention_heads = 8
-    forward_mul = 4
+    forward_mul = 2
     image_size = 32
     patch_size = 8
     n_classes = 10
-    batch_size = 64
+    batch_size = 256
     nb_workers = 0
-    num_epoch = 20
-    lr = 1e-4
+    num_epoch = 15
+    lr = 1e-3
     wd = 1e-4
     optimizer = torch.optim.Adam
     crit = nn.CrossEntropyLoss()
+    input_shape = (batch_size, n_channels, image_size, image_size)
 
     # create transform method 
     transform = transforms.Compose([transforms.Resize([image_size, image_size]),
@@ -67,7 +68,8 @@ if __name__ == "__main__":
                                     patch_size, n_classes)
 
     NN_model.save_path = base_path + '/results'
-	
+    NN_model.progressBar.set_custom_cursor('▄︻デ══━一💨', '-', '⁍', ' ', '🎯')
+
     # create your experiment 
     experiment = Experiment(NN_model, train_loader, test_loader, 
                 num_epoch=num_epoch,
@@ -78,7 +80,6 @@ if __name__ == "__main__":
                 criterion=crit,
                 nb_workers=nb_workers)
 
-    #print(experiment.model)
+    experiment.model.printArchitecture(input_shape)
     experiment.fit()
-    #experiment.predict()
     experiment.visualise()
