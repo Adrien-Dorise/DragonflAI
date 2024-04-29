@@ -176,7 +176,7 @@ class NeuralNetwork(nn.Module):
             
         try:  
             if self.history.loss_train[-1] == np.min(self.history.loss_train):
-                self.saveModel("{}/{}_best_train".format({self.save_path}, self.model_name))
+                self.saveModel("{}/{}_best_train".format(self.save_path, self.model_name))
             if self.history.loss_val[-1] == np.min(self.history.loss_val):
                 self.saveModel("{}/{}_best_val".format(self.save_path, self.model_name))
         except:
@@ -207,10 +207,6 @@ class NeuralNetwork(nn.Module):
         """
         # training starting callback 
         self._on_training_start()
-        # init results 
-        #self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
-        #self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
-        #self.set_scheduler(1)
         
         # iterate throw epochs 
         for _ in range(epochs):
