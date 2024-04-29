@@ -14,13 +14,15 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 class Experiment():
     def __init__(self, model,
                 train_loader, test_loader, 
-                num_epoch=50,
-                batch_size=32,
-                learning_rate=1e-03,
-                weight_decay=1e-03,    
-                optimizer=torch.optim.Adam,
-                criterion=torch.nn.L1Loss(),
-                nb_workers=0):
+                num_epoch     = 50,
+                batch_size    = 32,
+                learning_rate = 1e-03,
+                weight_decay  = 1e-03,
+                optimizer     = torch.optim.Adam,
+                scheduler     = None,
+                kwargs        = {},
+                criterion     = torch.nn.L1Loss(),
+                nb_workers    = 0):
         #Model parameters  
         self.model         = model
         self.num_epoch     = num_epoch
@@ -28,16 +30,21 @@ class Experiment():
         self.learning_rate = learning_rate
         self.weight_decay  = weight_decay
         self.optimizer     = optimizer
+        self.scheduler     = scheduler
+        self.kwargs        = kwargs
         self.criterion     = criterion
         self.nb_workers    = nb_workers
-        
-        self.train_loader = train_loader
-        self.test_loader  = test_loader
+        self.train_loader  = train_loader
+        self.test_loader   = test_loader
          
     def fit(self):
         """Train the model using the data available in the train and validation folder path.
         """
-
+        self.model._compile(self.train_loader, self.test_loader, 
+                            self.criterion, self.learning_rate, 
+                            self.optimizer, self.scheduler, 
+                            self.batch_size, self.num_epoch, **self.kwargs)
+        
         history = self.model.fit(self.train_loader,
         self.num_epoch, 
         criterion=self.criterion, 
