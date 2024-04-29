@@ -72,7 +72,7 @@ class NeuralNetwork(nn.Module):
             break
         self.opt       = []
         self.scheduler = []
-        self.scaler = []
+        self.scaler    = []
         self.scaler.append(torch.cuda.amp.GradScaler(enabled=self.use_gpu))
         try:
             kwargs_optimizer = kwargs['kwargs_optimizer']
@@ -81,7 +81,7 @@ class NeuralNetwork(nn.Module):
             self.opt.append(opts(self.architecture.parameters(), lr=lr))
         try:
             kwargs_scheduler = kwargs['kwargs_scheduler']
-            self.scheduler.append(scheduler(self.opt[0], kwargs_scheduler))
+            self.scheduler.append(scheduler(self.opt[0], **kwargs_scheduler))
         except:
             pass 
             
