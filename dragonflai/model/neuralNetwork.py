@@ -62,11 +62,45 @@ class NeuralNetwork(nn.Module):
         self.model_name =  name
         
         
+    def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, **kwargs):
+        for _, sample in enumerate(train_loader):
+            # get batch 
+            inputs, targets = self.get_batch(sample=sample)
+            _, output = self.loss_calculation(crit, inputs, targets, with_grad=False)
+            self.input_shape = inputs.shape
+            output_shape = output.shape
+            break
+        self.opt       = []
+        self.scheduler = []
+        self.scaler = []
+        self.scaler.append(torch.cuda.amp.GradScaler(enabled=self.use_gpu))
+        try:
+            kwargs_optimizer = kwargs['kwargs_optimizer']
+            self.opt.append(opts(self.architecture.parameters(), lr=lr, **kwargs_optimizer))
+        except:
+            self.opt.append(opts(self.architecture.parameters(), lr=lr))
+        try:
+            kwargs_scheduler = kwargs['kwargs_scheduler']
+            self.scheduler.append(scheduler(self.opt[0], kwargs_scheduler))
+        except:
+            pass 
+            
+        self.printArchitecture(self.input_shape)
         
+        self.init_results(train_loader, test_loader, batch_size, epochs)
+        print('Training model {} during {} epochs with batch size set to {} on {} training data and validating on {} data'
+              .format(self.model_name, self.history.parameters['nb_max_epochs'], 
+                      self.history.parameters['batch_size'], 
+                      self.history.parameters['batch_size'] * self.history.parameters['steps_per_epoch_train'], 
+                      self.history.parameters['batch_size'] * self.history.parameters['steps_per_epoch_val'],
+                      ))
+        print('\ninput_shape {}  ====> {} {} ====> output_shape {}\n'.format(
+            self.input_shape, self.history.modelType, self.history.taskType, output_shape
+            ))
     
     
 
-    def init_results(self, loss_indicators, train_loader, test_loader, batch_size, epochs, *args, **kwargs):
+    def init_results(self, train_loader, test_loader, batch_size, epochs, *args, **kwargs):
         #Use GPU if available
         if self.use_gpu:
             print("CUDA compatible GPU found")
@@ -81,29 +115,6 @@ class NeuralNetwork(nn.Module):
             'steps_per_epoch_val'  : len(test_loader),
             }
         self.history.set_new_parameters(parameters)
-
-    def set_optimizer(self, 
-                      optimizer=torch.optim.AdamW, 
-                      learning_rate=1e-4, 
-                      weight_decay=1e-4, 
-                      *args, **kwargs):
-        '''set optimizer'''
-        self.opt = [None]
-        if weight_decay is None:
-            self.opt[0] = optimizer(self.architecture.parameters(), lr=learning_rate)
-        else:
-            self.opt[0] = optimizer(self.architecture.parameters(), lr=learning_rate, 
-                            weight_decay=weight_decay)
-        
-        self.scaler = [None]
-        self.scaler[0] = torch.cuda.amp.GradScaler(enabled=self.use_gpu)
-        
-    def set_scheduler(self, opt, scheduler=None, *args, **kwargs):
-        '''set scheduler'''
-        self.scheduler = [None]
-        
-        if self.scheduler is not None:
-            self.scheduler[0] = torch.optim.lr_scheduler.ReduceLROnPlateau(self.opt[0], mode='min', factor=0.33, patience=1) 
         
     def update_scheduler(self, *args, **kwargs):
         '''update scheduler'''
@@ -112,7 +123,6 @@ class NeuralNetwork(nn.Module):
             for scheduler in self.scheduler:
                 scheduler.step(loss)
 
-    
     def get_batch(self, *args, **kwargs):
         '''get batch'''
         sample = kwargs['sample']
@@ -198,9 +208,9 @@ class NeuralNetwork(nn.Module):
         # training starting callback 
         self._on_training_start()
         # init results 
-        self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
-        self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
-        self.set_scheduler(1)
+        #self.init_results(loss_indicators, train_set, valid_set, batch_size, epochs)
+        #self.set_optimizer(optimizer=optimizer, learning_rate=learning_rate, weight_decay=weight_decay)
+        #self.set_scheduler(1)
         
         # iterate throw epochs 
         for _ in range(epochs):
@@ -217,7 +227,7 @@ class NeuralNetwork(nn.Module):
                                                 lr=self.opt[0].param_groups[0]['lr'], 
                                                 acc=self.acc)
             # predict on validation set 
-            val_loss, _, _ = self.predict(valid_set, crit=criterion, loss_indicators=1)
+            val_loss, _, _ = self.predict(valid_set, crit=criterion)
             # update sheduler on validation set 
             self.update_scheduler(loss=val_loss)
             # ending epoch callback 
@@ -228,7 +238,7 @@ class NeuralNetwork(nn.Module):
         return self.history
 
 
-    def predict(self, test_set, crit=nn.L1Loss(), loss_indicators=1):
+    def predict(self, test_set, crit=nn.L1Loss()):
         """Use the trained model to predict a target values on a test set
         
         For now, we assume that the target value is known, so it is possible to calculate an error value.

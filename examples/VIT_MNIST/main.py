@@ -22,21 +22,28 @@ from dragonflai.model.utils import *
 
 if __name__ == "__main__":
     # parameters 
-    n_channels = 1 
-    embed_dim = 64 
-    n_layers = 8
+    n_channels        = 1
+    embed_dim         = 64
+    n_layers          = 8
     n_attention_heads = 8
-    forward_mul = 2
-    image_size = 32
-    patch_size = 8
-    n_classes = 10
-    batch_size = 256
-    nb_workers = 0
-    num_epoch = 15
-    lr = 1e-3
-    wd = 1e-4
-    optimizer = torch.optim.Adam
-    crit = nn.CrossEntropyLoss()
+    forward_mul       = 2
+    image_size        = 32
+    patch_size        = 8
+    n_classes         = 10
+    batch_size        = 256
+    nb_workers        = 0
+    num_epoch         = 15
+    lr                = 1e-3
+    wd                = 1e-4
+    optimizer         = torch.optim.Adam
+    crit              = nn.CrossEntropyLoss()
+    scheduler         = torch.optim.lr_scheduler.ReduceLROnPlateau
+
+    kwargs_optimizer = {'weight_decay': wd}
+    kwargs_scheduler = {'mode': 'min', 'factor': 0.33, 'patience': 1}
+    kwargs = {'kwargs_scheduler': kwargs_scheduler}
+
+
     input_shape = (batch_size, n_channels, image_size, image_size)
 
     # create transform method 
@@ -78,6 +85,8 @@ if __name__ == "__main__":
                 weight_decay=wd,    
                 optimizer=optimizer, 
                 criterion=crit,
+                scheduler=scheduler, 
+                kwargs=kwargs, 
                 nb_workers=nb_workers)
 
     experiment.model.printArchitecture(input_shape)
