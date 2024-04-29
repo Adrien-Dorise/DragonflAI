@@ -81,7 +81,7 @@ class NeuralNetwork(nn.Module):
             self.opt.append(opts(self.architecture.parameters(), lr=lr))
         try:
             kwargs_scheduler = kwargs['kwargs_scheduler']
-            self.scheduler.append(scheduler(self.opt[0], kwargs_scheduler))
+            self.scheduler.append(scheduler(self.opt[0], **kwargs_scheduler))
         except:
             pass 
             
