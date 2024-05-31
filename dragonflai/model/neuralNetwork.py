@@ -67,7 +67,10 @@ class NeuralNetwork(nn.Module):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
             _, output = self.loss_calculation(crit, inputs, targets, with_grad=False)
-            self.input_shape = inputs.shape
+            if isinstance(inputs, tuple):
+                self.input_shape = [inp.shap for inp in inputs]
+            else:
+                self.input_shape = inputs.shape
             output_shape = output.shape
             break
         self.opt       = []
@@ -126,8 +129,25 @@ class NeuralNetwork(nn.Module):
     def get_batch(self, *args, **kwargs):
         '''get batch'''
         sample = kwargs['sample']
-        return sample[0].to(self.device), sample[1].to(self.device)
-            
+        nb_inputs = len(sample[0])
+        nb_outputs = len(sample[1])
+        if nb_inputs > 1:
+            inputs = ()
+            for i in range(nb_inputs):
+                inputs += (sample[0][i].to(self.device, dtype=torch.float32), )
+            inputs = torch.stack(inputs, dim=0)
+        else:
+            inputs = sample[0].to(self.device, dtype=torch.float32)
+
+        if nb_outputs > 1:
+            outputs = ()
+            for i in range(nb_outputs):
+                outputs += (sample[1][i].to(self.device, dtype=torch.float32),)
+            # outputs = torch.stack(outputs, dim=0)
+        else:
+            outputs = sample[1].to(self.device, dtype=torch.float32)
+        return inputs, outputs
+
     def loss_calculation(self, crit, inputs, target, *args, **kwargs):
         '''compute loss'''
         # get with_grad parameter 
