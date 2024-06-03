@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name="dragonflai",
-      version="0.8.5",
+      version="0.8.6",
       description="LR Technologies template for articial intelligence related projects",
       author="Adrien Dorise, Edouard Villain, Julia Cohen, Boris Lenseigne",
       author_email="{adorise, evillain, jcohen, blenseigne}@lrtechnologies.fr",
@@ -13,6 +13,7 @@ setup(name="dragonflai",
                 "dragonflai.model", 
                 "dragonflai.visualisation", 
                 "dragonflai.model.neural_network_architectures",
+                "dragonflai.model.machine_learning_architectures",
                 ],
       install_requires=[
             "cnnvis @ git+https://github.com/Adrien-Dorise/cnnvis-pytorch", 

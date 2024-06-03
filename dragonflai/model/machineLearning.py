@@ -1,17 +1,14 @@
 """
-This is is LR Technologies Face&Mouse application.
-Last Update by Adrien Dorise - April 2023
+This is DragonflAI Machine learning main script
+Last Update by Adrien Dorise - May 2024
 
-This package references all "classic" machine learniong classes used in the application.
+This package references the default behaviour for all machine learning models.
+It is done so it can called similarly as the neural network package of DragonflAI
 Scikit-learn is the main API used.
-Author: Adrien Dorise (adorise@lrtechnologies.fr) - LR Technologies
+Author: Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies 
 Created: Feb 2023
-Last updated: Adrien Dorise - July 2023
-
 """
 
-from sklearn.linear_model import TweedieRegressor, BayesianRidge, SGDRegressor
-from sklearn import svm, neighbors, naive_bayes, tree, ensemble
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as metrics
 import joblib
@@ -20,100 +17,23 @@ import pandas as pd
 import os
 
 
-class Regressor():
-    
-    
-    def __init__(self, model, lossMetric=metrics.mean_absolute_error, verbose=False, 
-                 tweedie_param = [1, 0.5, "log"], 
-                 bayes_param = [1e-05,1e-05,1e-05,1e-05], 
-                 SGD_param = ['squared_error', 'l1',0.0001,'optimal'], 
-                 SVM_param = ["rbf",1,0.1,0.5,'auto'], 
-                 KNN_param = [3,1], 
-                 tree_param = ["absolute_error",500], 
-                 forest_param = ["squared_error",50,100], 
-                 AdaBoost_param = [None, 50, 1, "linear"], 
-                 GBoost_param = [50, 0.5, "squared_error"]):
-        """
-        Initialise the model with desired algorithm
-        
-        Args:
-            model (string): algorithm selection
-            lossMetric (sklearn.metrics): metrics used for loss calculation when evaluating fit or predict. It is also used for gridSearch. List on https://scikit-learn.org/stable/modules/model_evaluation.html#scoring-parameter
-            verbose (bool): Put to true to print details during training. Default to False.
-            *args: Parameters of each specific algorithm
-        """
-        self.metric = lossMetric
-        self.choice = model
-        self.model = []
-        if model == "tweedie": #Generalized models
-            self.model.append(TweedieRegressor(power=tweedie_param[0], alpha=tweedie_param[1], link=tweedie_param[2],verbose=verbose)) 
-            self.model.append(TweedieRegressor(power=tweedie_param[0], alpha=tweedie_param[1], link=tweedie_param[2],verbose=verbose)) 
-        elif model == "bayesLinear": #Bayesian regression
-            self.model.append(BayesianRidge(alpha_1=bayes_param[0], alpha_2=bayes_param[1], lambda_1=bayes_param[2], lambda_2=bayes_param[3], verbose=verbose))
-            self.model.append(BayesianRidge(alpha_1=bayes_param[0], alpha_2=bayes_param[1], lambda_1=bayes_param[2], lambda_2=bayes_param[3], verbose=verbose))
-        elif model == "SGD": #Stochastic Gradient Descent
-            self.model.append(SGDRegressor(loss=SGD_param[0], penalty=SGD_param[1], alpha=SGD_param[2],  learning_rate=SGD_param[3], verbose=verbose)) 
-            self.model.append(SGDRegressor(loss=SGD_param[0], penalty=SGD_param[1], alpha=SGD_param[2],  learning_rate=SGD_param[3], verbose=verbose)) 
-        elif model == "SVM": #Kernel support vector machines
-            self.model.append(svm.SVR(kernel=SVM_param[0], C=SVM_param[1], epsilon=SVM_param[2], coef0=SVM_param[3], gamma=SVM_param[4],verbose=verbose)) 
-            self.model.append(svm.SVR(kernel=SVM_param[0], C=SVM_param[1], epsilon=SVM_param[2], coef0=SVM_param[3], gamma=SVM_param[4],verbose=verbose)) 
-        elif model == "KNN": #K-Nearest Neighbors
-            self.model.append(neighbors.KNeighborsRegressor(n_neighbors=KNN_param[0], p=KNN_param[1]))
-        elif model == "tree": #Decision Tree
-            self.model.append(tree.DecisionTreeRegressor(criterion=tree_param[0], max_depth=tree_param[1]))
-        elif model == "forest": #Random forest
-            self.model.append(ensemble.RandomForestRegressor(criterion=forest_param[0], max_depth=forest_param[1], n_estimators=forest_param[2],verbose=verbose))
-        elif model == "AdaBoost": #AdaBoost
-            self.model.append(ensemble.AdaBoostRegressor(estimator=AdaBoost_param[0],n_estimators=AdaBoost_param[1], learning_rate=AdaBoost_param[2], loss=AdaBoost_param[3]))
-            self.model.append(ensemble.AdaBoostRegressor(estimator=AdaBoost_param[0],n_estimators=AdaBoost_param[1], learning_rate=AdaBoost_param[2], loss=AdaBoost_param[3]))
-        elif model == "GBoost": #Gradient tree boosting GBoost
-            self.model.append(ensemble.GradientBoostingRegressor(n_estimators=GBoost_param[0], learning_rate=GBoost_param[1], loss=GBoost_param[2],verbose=verbose))
-            self.model.append(ensemble.GradientBoostingRegressor(n_estimators=GBoost_param[0], learning_rate=GBoost_param[1], loss=GBoost_param[2],verbose=verbose))
-        else:
-            self.choice = "tree"
-            self.model.append(tree.DecisionTreeRegressor())
-        
-        
-    def gridSeach(self, parameters, train_set, verbose=2, parallel_jobs=-1, save_path="models/paramSearch/gridSearch"):
-        """Perform a parameter search of the model using Kfold cross validation.
-        The search object is then save into a joblib object as well as a csv file.
+
     
 
-        Args:
-            parameters (dict): Set of parameters to search
-            train_set (DataLoader): data set used to search the parameters
-            verbose (int, optional): Controls the verbosity between [0,3]. Defaults to 2.
-            parallel_jobs (int, optional): Number of jobs in parallel. -1 means all processors. Defaults to -1.
-            save_path (str, optional): Path+name to save the search. Defaults to "models/paramSearch/gridSearch".
-        Return:
-            Return the search object.
-        """
-        
-        searchResults = []
-        modelIter = 0
-        inputs,target = self.extract_set(train_set)
-        
-        for mod in self.model:
-            print(f"Grid search for model{modelIter} of {self.choice}")
-            search = GridSearchCV(mod, parameters, verbose=verbose, n_jobs=parallel_jobs)
-            if(len(self.model)==1): #Only one output or multi output model
-                search.fit(inputs, target)
-            else:
-                search.fit(inputs, target[:,modelIter])
-                
-            joblib.dump(search,f"{save_path}_{self.choice}{modelIter}.sav")
-            pd.DataFrame(search.cv_results_).to_csv(f"{save_path}_{self.choice}{modelIter}.csv")
-            searchResults.append(search)
-            modelIter+=1
-        
-        print("\nGrid Search best params found:")
-        for res in searchResults:
-            print(res.best_params_)
-            
-        return searchResults
-        
-        
-        
+
+class MachineLearning():
+    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1):
+        self.metric = loss_metric
+        self.choice = model
+        self.output_size = output_size
+        self.model = []
+        self.model_name = ""
+
+    def _compile(self, **kwargs):
+        print('\nCompiling machine learning model {}'.format(self.choice))
+        print('Output size is {}'.format(self.output_size))
+
+
     def fit(self, train_set):
         """Train a model on a training set
         
@@ -162,11 +82,10 @@ class Regressor():
             [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
 
-        inputs,target = self.extract_set(test_set)
+        inputs, target = self.extract_set(test_set)
         # forward
         outputs = self.forward(inputs)
-        score = self.metric(target,outputs)
-        return score, outputs, [inputs.detach().numpy(), target.detach().numpy()]
+        return outputs, [inputs.detach().numpy(), target.detach().numpy()]
     
     
     def forward(self, data):
@@ -184,6 +103,45 @@ class Regressor():
         return np.array(results).reshape(len(results[0]),-1)
     
     
+    
+    def grid_search(self, parameters, train_set, verbose=2, parallel_jobs=-1, save_path="models/paramSearch/gridSearch"):
+        """Perform a parameter search of the model using Kfold cross validation.
+        The search object is then save into a joblib object as well as a csv file.
+    
+
+        Args:
+            parameters (dict): Set of parameters to search
+            train_set (DataLoader): data set used to search the parameters
+            verbose (int, optional): Controls the verbosity between [0,3]. Defaults to 2.
+            parallel_jobs (int, optional): Number of jobs in parallel. -1 means all processors. Defaults to -1.
+            save_path (str, optional): Path+name to save the search. Defaults to "models/paramSearch/gridSearch".
+        Return:
+            Return the search object.
+        """
+        
+        searchResults = []
+        modelIter = 0
+        inputs,target = self.extract_set(train_set)
+        
+        for mod in self.model:
+            print(f"Grid search for model{modelIter} of {self.choice}")
+            search = GridSearchCV(mod, parameters, verbose=verbose, n_jobs=parallel_jobs)
+            if(len(self.model)==1): #Only one output or multi output model
+                search.fit(inputs, target)
+            else:
+                search.fit(inputs, target[:,modelIter])
+                
+            joblib.dump(search,f"{save_path}_{self.choice}{modelIter}.sav")
+            pd.DataFrame(search.cv_results_).to_csv(f"{save_path}_{self.choice}{modelIter}.csv")
+            searchResults.append(search)
+            modelIter+=1
+        
+        print("\nGrid Search best params found:")
+        for res in searchResults:
+            print(res.best_params_)
+            
+        return searchResults
+        
     def extract_set(self,dataset):
         """Extract features and targets from a dataLoader object
         Tool function used by other function of the class (fit, predict, gridSearch)
@@ -199,14 +157,22 @@ class Regressor():
             feature set (array)
             target set (array)
         """
-        for i, data in enumerate(dataset, 0):
+        for i, sample in enumerate(dataset, 0):
             if(dataset.batch_size != len(dataset.dataset)):
                 raise Warning(f"The number of batch exceed 1. This program does not support multi-batch processing. Make sure that batch_size is equal to the number of inputs.\nBatch_size / input: [{dataset.batch_size} / {len(dataset.dataset)}]")
             else:
                 # get the inputs; data is a list of [inputs, target]
-                return data[0],data[1]
-    
-    def saveModel(self, path):
+                return sample[0],sample[1]
+
+    def print_architecture(self, **kwargs):
+        """
+        Display model informations
+        """
+        print("\nMachine learning model information: ")
+        print(f"output size: {self.output_size}")
+        print(self.model)
+
+    def save_model(self, path):
         """Save the model state in a sav file
         The model type is added to the file name
         
@@ -229,7 +195,7 @@ class Regressor():
             joblib.dump(mod,f"{path}_{self.choice}{iter}.sav")
             iter+=1
     
-    def loadModel(self, path):
+    def load_model(self, path):
         """Load a model from a .sav file
 
         Args:
@@ -242,6 +208,8 @@ class Regressor():
                 iter+=1
         except Exception:
             raise Exception(f"Error when loading Machine Learning model: {path}_{self.choice}{iter}.sav not found")    
+
+
 
 
 if __name__ == "__main__":

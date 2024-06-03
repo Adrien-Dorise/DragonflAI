@@ -20,6 +20,7 @@ class taskType(Enum):
     REGRESSION     = 1
     CLASSIFICATION = 2
     SEGMENTATION   = 3
+    CLUSTERING     = 4
     
 class dragonflAI_callback():
     '''callback implementation class'''
@@ -61,6 +62,10 @@ class dragonflAI_History():
             
         }
         '''parameters -> dict of unchanged parameters during training'''
+
+        self.parameters_ML = {
+            
+        }
         
         self.current_status = {
             'current_epoch'      : 0,
