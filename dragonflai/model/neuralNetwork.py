@@ -1,6 +1,6 @@
 """
 This package references all neural network classes used in the application.
-Author: Julia Cohen - Adrien Dorise - Edouard Villain ({jcohen, adorise, evillain}@lrtechnologies.fr) - LR Technologies
+Author: Julia Cohen - Adrien Dorise (adrien.dorise@hotmail.com) - Edouard Villain (evillain@lrtechnologies.fr) - LR Technologies
 Created: March 2023
 Last updated: Edouard Villain - April 2024 
 
@@ -404,7 +404,7 @@ class NeuralNetwork(nn.Module):
         fig.savefig("{}/{}_history.png".format(self.save_path, name))
         
     def printArchitecture(self, input_shape):
-        """Display neural netwotk architecture
+        """Display neural network architecture
         
         Note that the output size of each layer depends on the input shape given to the model (helps to get a good understansing in case of convolution layers)
 

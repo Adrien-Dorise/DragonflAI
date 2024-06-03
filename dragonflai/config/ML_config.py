@@ -6,7 +6,7 @@
 """
 
 import sklearn.tree as tree
-from dragonflai.model.machineLearning import Regressor
+from dragonflai.model.machine_learning_architectures.regressor import Regressor
 
 
 availableModels = ["tweedie", "bayesLinear", "SGD", "SVM", "KNN", "tree", "forest", "AdaBoost", "GBoost"]
