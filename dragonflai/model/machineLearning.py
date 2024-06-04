@@ -104,7 +104,7 @@ class MachineLearning():
     
     
     
-    def grid_search(self, parameters, train_set, verbose=2, parallel_jobs=-1, save_path="models/paramSearch/gridSearch"):
+    def grid_search(self, parameters, train_set, verbose=1, parallel_jobs=-1, save_path="models/paramSearch/"):
         """Perform a parameter search of the model using Kfold cross validation.
         The search object is then save into a joblib object as well as a csv file.
     
@@ -112,9 +112,9 @@ class MachineLearning():
         Args:
             parameters (dict): Set of parameters to search
             train_set (DataLoader): data set used to search the parameters
-            verbose (int, optional): Controls the verbosity between [0,3]. Defaults to 2.
+            verbose (int, optional): Controls the verbosity between [0,3]. Defaults to 1.
             parallel_jobs (int, optional): Number of jobs in parallel. -1 means all processors. Defaults to -1.
-            save_path (str, optional): Path+name to save the search. Defaults to "models/paramSearch/gridSearch".
+            save_path (str, optional): Path to save the search. Defaults to "models/paramSearch/".
         Return:
             Return the search object.
         """
@@ -131,14 +131,15 @@ class MachineLearning():
             else:
                 search.fit(inputs, target[:,modelIter])
                 
-            joblib.dump(search,f"{save_path}_{self.choice}{modelIter}.sav")
-            pd.DataFrame(search.cv_results_).to_csv(f"{save_path}_{self.choice}{modelIter}.csv")
+            joblib.dump(search,f"{save_path}{self.choice}{modelIter}.sav")
+            pd.DataFrame(search.cv_results_).to_csv(f"{save_path}{self.choice}{modelIter}.csv")
             searchResults.append(search)
             modelIter+=1
         
         print("\nGrid Search best params found:")
+        print(f"model: {self.model_name}")
         for res in searchResults:
-            print(res.best_params_)
+            print(f"Score: {res.best_score_} / Params: {res.best_params_}\n")
             
         return searchResults
         
