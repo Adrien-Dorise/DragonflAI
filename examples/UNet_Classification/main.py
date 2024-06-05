@@ -40,10 +40,21 @@ class OxfordIIITPetsAugmented(datasets.OxfordIIITPet):
         seg -= 1
         seg = seg.squeeze()
 
-        return input, [label, seg]
+        return input, label, seg
 
-def custom_loss(input, pred):
-    return nn.CrossEntropyLoss(input, pred)
+class CustomLoss(nn.Module):
+    def __init__(self, loss4Seg = nn.CrossEntropyLoss(), loss4Classif = nn.CrossEntropyLoss()):
+        super(CustomLoss, self).__init__()
+        self.loss4Seg = loss4Seg
+        self.loss4Classif = loss4Classif
+
+    def forward(self, outputs, targets):
+
+        Lseg = self.loss4Seg(outputs[0], targets[1])
+        Lclassif = self.loss4Classif(outputs[1], targets[0])
+
+        return Lseg + Lclassif
+
 
 if __name__ == "__main__":
     # parameters 
@@ -57,7 +68,7 @@ if __name__ == "__main__":
     wd                      = 1e-4
     optimizer               = torch.optim.Adam
     # crit                    = nn.CrossEntropyLoss()
-    crit = custom_loss
+    crit = CustomLoss()
     scheduler               = torch.optim.lr_scheduler.ReduceLROnPlateau
     numberOfImagesToDisplay = 5
 
