@@ -20,6 +20,7 @@ The package works as follow:
 from os.path import exists
 from torchinfo import summary
 from torchview import draw_graph
+import torchviz 
 
 import torch.nn as nn
 import torch
@@ -67,8 +68,11 @@ class NeuralNetwork(nn.Module):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
             _, output = self.loss_calculation(crit, inputs, targets, with_grad=False)
-            self.input_shape = inputs.shape
-            output_shape = output.shape
+            if isinstance(inputs, tuple):
+                self.input_shape = [inp.shape for inp in inputs]
+            else:
+                self.input_shape = inputs.shape 
+            output_shape = output.shape  
             break
         self.opt       = []
         self.scheduler = []
@@ -124,9 +128,26 @@ class NeuralNetwork(nn.Module):
                 scheduler.step(loss)
 
     def get_batch(self, *args, **kwargs):
-        '''get batch'''
+        '''get batch : return a batch from loader containing input and target 
+        input can be multimodal if your loader return [input_0, ... input_n], Y'''
         sample = kwargs['sample']
-        return sample[0].to(self.device), sample[1].to(self.device)
+        
+        if isinstance(sample[0], list):
+            inputs = ()
+            for i in range(len(sample[0])): 
+                inputs += (sample[0][i].to(self.device, dtype=torch.float32),)
+        else:
+            inputs = sample[0].to(self.device, dtype=torch.float32)
+            
+        if isinstance(sample[1], list):
+            targets = ()
+            for i in range(len(sample[1])): 
+                targets += (sample[1][i].type(torch.LongTensor).to(self.device),)
+        else:
+            targets = sample[1].type(torch.LongTensor).to(self.device)
+            
+            
+        return inputs, targets
             
     def loss_calculation(self, crit, inputs, target, *args, **kwargs):
         '''compute loss'''
@@ -251,7 +272,11 @@ class NeuralNetwork(nn.Module):
         # predict starting callback 
         self._on_predict_start()
         # init list 
-        self.inputs, self.outputs, self.targets, self.test_loss = [],[],[],[]
+        if isinstance(self.input_shape, list):
+            self.inputs = [[] for i in range(len(self.input_shape))]
+        else:
+            self.inputs = []
+        self.outputs, self.targets, self.test_loss = [],[],[]
         # iterate validation set 
         for _, sample in enumerate(test_set):
             # get batch 
@@ -274,7 +299,10 @@ class NeuralNetwork(nn.Module):
             # at first batch of first epoch : draw model in png 
             if self.history.current_status['current_epoch'] == 1 and \
                 self.history.current_status['current_batch_train'] == 0: #Print network architecture
-                draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
+                #draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
+                torchviz.make_dot(output.mean(), 
+                                  params=dict(self.architecture.named_parameters()), 
+                                  show_attrs=True, show_saved=False).render('{}/architecture'.format(self.save_path), format='png')
             # add current batch loss 
             self.batch_loss.append(loss.cpu().item())
             # backward pass 
@@ -290,7 +318,11 @@ class NeuralNetwork(nn.Module):
             # add current test loss 
             self.test_loss.append(loss.item()) 
             # get input, target, ouput as array 
-            self.inputs.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            if isinstance(input, tuple):
+                self.inputs[0].extend(np.array(input[0].cpu().detach(), dtype=np.float32)) 
+                self.inputs[1].extend(np.array(input[1].cpu().detach(), dtype=np.float32)) 
+            else:
+                self.inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
             self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
             self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
             # update accuracy if needed 
@@ -414,7 +446,8 @@ class NeuralNetwork(nn.Module):
         
         print("\nNeural network architecture: \n")
         print(f"Input shape: {input_shape}")
-        summary(self, input_shape)
+        #summary(self, input_shape[0])
+        print(self.architecture)
         print("\n")
         
         
