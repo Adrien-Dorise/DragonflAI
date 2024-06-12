@@ -40,7 +40,7 @@ class OxfordIIITPetsAugmented(datasets.OxfordIIITPet):
         seg -= 1
         seg = seg.squeeze()
 
-        return input, label, seg
+        return input, [label, seg]
 
 class CustomLoss(nn.Module):
     def __init__(self, loss4Seg = nn.CrossEntropyLoss(), loss4Classif = nn.CrossEntropyLoss()):
@@ -59,11 +59,11 @@ class CustomLoss(nn.Module):
 if __name__ == "__main__":
     # parameters 
     n_channels              = 3
-    image_size              = 16
+    image_size              = 32
     n_classes               = 3
-    batch_size              = 8
+    batch_size              = 4
     nb_workers              = 0
-    num_epoch               = 1
+    num_epoch               = 10
     lr                      = 1e-3
     wd                      = 1e-4
     optimizer               = torch.optim.Adam
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     train = OxfordIIITPetsAugmented(base_path + '/data', split="trainval", target_types=("segmentation", "category"), download=True, image_size=image_size)
     test = OxfordIIITPetsAugmented(base_path + '/data', split="test", target_types=("segmentation", "category"), download=True, image_size=image_size)
 
-    train = torch.utils.data.Subset(train, range(300))
+    train = torch.utils.data.Subset(train, range(50))
     test = torch.utils.data.Subset(test, range(10))
 
     train_loader = torch.utils.data.DataLoader(dataset=train,
