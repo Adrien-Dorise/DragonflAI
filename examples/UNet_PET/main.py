@@ -13,7 +13,7 @@ from torchvision import datasets
 import torchvision.transforms as T
 
 import dragonflai.model.neural_network_architectures.UNet as UNet
-from dragonflai.model.utils import * 
+from dragonflai.utils.utils_model import * 
 
 class OxfordIIITPetsAugmented(datasets.OxfordIIITPet):
     def __init__(self, root: str, split: str, target_types="segmentation", download=False, image_size=64):
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     n_classes               = 3
     batch_size              = 8
     nb_workers              = 0
-    num_epoch               = 1
+    num_epoch               = 3
     lr                      = 1e-3
     wd                      = 1e-4
     optimizer               = torch.optim.Adam
@@ -60,12 +60,12 @@ if __name__ == "__main__":
     kwargs_scheduler = {'mode': 'min', 'factor': 0.33, 'patience': 1}
     kwargs = {'kwargs_scheduler': kwargs_scheduler}
 
-    base_path = './examples/UNet_PET'
+    base_path = './examples/UNet_PET/'
 
     input_shape = (batch_size, n_channels, image_size, image_size)
     
-    train = OxfordIIITPetsAugmented(base_path + '/data', split="trainval", target_types="segmentation", download=True, image_size=image_size)
-    test = OxfordIIITPetsAugmented(base_path + '/data', split="test", target_types="segmentation", download=True, image_size=image_size)
+    train = OxfordIIITPetsAugmented(base_path + 'data', split="trainval", target_types="segmentation", download=True, image_size=image_size)
+    test = OxfordIIITPetsAugmented(base_path + 'data', split="test", target_types="segmentation", download=True, image_size=image_size)
 
     train = torch.utils.data.Subset(train, range(300))
     test = torch.utils.data.Subset(test, range(10))
@@ -83,7 +83,7 @@ if __name__ == "__main__":
  
     NN_model = UNet.UNet_PET(n_channels, n_classes)
 
-    NN_model.save_path = base_path + '/results'
+    NN_model.save_path = base_path + 'results/'
     NN_model.progressBar.set_custom_cursor('▄︻デ══━一💨', '-', '⁍', ' ', '🎯')
 
     experiment = Experiment(NN_model, train_loader, test_loader, 
@@ -98,6 +98,6 @@ if __name__ == "__main__":
                 nb_workers=nb_workers,
                 numberOfImagesToDisplay=numberOfImagesToDisplay)
 
-    experiment.model.printArchitecture(input_shape)
+    experiment.model.print_architecture(input_shape)
     experiment.fit()
     experiment.visualise()

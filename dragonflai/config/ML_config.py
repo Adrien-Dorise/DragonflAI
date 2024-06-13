@@ -1,19 +1,17 @@
 """
- Parameters for machine learning applications
- Author: Adrien Dorise (adorise@lrtechnologies.fr) - LR Technologies
+ Parameters example for machine learning applications
+ Author: Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
  Created: June 2023
- Last updated: Adrien Dorise - November 2023
+ Last updated: Adrien Dorise - June 2024
 """
 
 import sklearn.tree as tree
-from dragonflai.model.machine_learning_architectures.regressor import Regressor
+import dragonflai.model.machine_learning_architectures.classification as MLClassif
+import dragonflai.model.machine_learning_architectures.clustering as MLClust
+import dragonflai.model.machine_learning_architectures.regressor as MLRegr
 
 
-availableModels = ["tweedie", "bayesLinear", "SGD", "SVM", "KNN", "tree", "forest", "AdaBoost", "GBoost"]
-
-tweedie_parameters = {"power": [0,1,1.5,2,3], 
-                        "alpha": [0,0.25,0.5,0.75,1,2.5,5,10], 
-                        "link": ["auto"]}
+# search space for regression grid search
 bayesLinear_parameters = {"alpha_1": [1e-05,1e-06,1e-07], 
                             "alpha_2": [1e-05,1e-06,1e-07], 
                             "lambda_1": [1e-05,1e-06,1e-07], 
@@ -41,7 +39,10 @@ GBoost_parameters = {"loss": ["squared_error", "absolute_error", "huber"],
                         "n_estimators": [10,50,100],
                         "learning_rate": [0.85,1,1.25]}
 
-parametersModel = [tweedie_parameters, bayesLinear_parameters, SGD_parameters, SVM_parameters, KNN_parameters, tree_parameters, forest_parameters, adaBoost_parameters, GBoost_parameters]
+classification_models = [MLRegr.Regressor(models) for models in MLRegr.Regression_Models]
+gridsearch_parameters = [bayesLinear_parameters,SGD_parameters, SVM_parameters, KNN_parameters, tree_parameters, forest_parameters, adaBoost_parameters, GBoost_parameters]
 
-ML_model = Regressor("SVM")
+# Selection of model
+SVM_param = ["rbf", 5, 0.01, 0.5, 'scale']
+ML_model = MLRegr.Regressor(MLRegr.Regression_Models.SVM, SVM_param=SVM_param)
     

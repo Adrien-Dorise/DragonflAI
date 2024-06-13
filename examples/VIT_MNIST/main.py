@@ -18,7 +18,7 @@ from torchvision import datasets
 from torchvision import transforms
 import torch.nn as nn
 
-from dragonflai.model.utils import * 
+from dragonflai.utils.utils_model import * 
 
 if __name__ == "__main__":
     # parameters 
@@ -52,10 +52,10 @@ if __name__ == "__main__":
                                         transforms.Normalize([0.5], [0.5])])
     
     # set your base path 
-    base_path = './examples/VIT_MNIST'
+    base_path = './examples/VIT_MNIST/'
     # get data 
-    train = datasets.MNIST(base_path + '/data', train=True, download=True, transform=transform)
-    test = datasets.MNIST(base_path + '/data', train=False, download=True, transform=transform)
+    train = datasets.MNIST(base_path + 'data', train=True, download=True, transform=transform)
+    test = datasets.MNIST(base_path + 'data', train=False, download=True, transform=transform)
     # create loader 
     train_loader = torch.utils.data.DataLoader(dataset=train,
                                                 batch_size=batch_size,
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                                     forward_mul, image_size, 
                                     patch_size, n_classes)
 
-    NN_model.save_path = base_path + '/results'
+    NN_model.save_path = base_path + 'results/'
     NN_model.progressBar.set_custom_cursor('▄︻デ══━一💨', '-', '⁍', ' ', '🎯')
 
     # create your experiment 
@@ -89,6 +89,6 @@ if __name__ == "__main__":
                 kwargs=kwargs, 
                 nb_workers=nb_workers)
 
-    experiment.model.printArchitecture(input_shape)
+    experiment.model.print_architecture(input_shape)
     experiment.fit()
     experiment.visualise()

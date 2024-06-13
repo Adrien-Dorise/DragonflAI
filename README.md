@@ -9,4 +9,4 @@ DragonflAI API is based on a main experiment class that encapsulates all tools n
 
 DragonflAI is an open-source project, supported by the Research team of LR Technologies.
 
-The research team of LRT is composed of Adrien Dorise, Edouard Villain, Julia Cohen, and Boris Lenseigne
+Main Contributors: Adrien Dorise, Edouard Villain, Julia Cohen, Boris Lenseigne

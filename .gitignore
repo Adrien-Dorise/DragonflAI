@@ -1,8 +1,9 @@
-#Face tracker project
+#Your project
 data/
 models/
 driveConfig.py
 output/
+results/
 
 #Python compiled files
 __pycache__/

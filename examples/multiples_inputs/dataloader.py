@@ -35,7 +35,7 @@ class Dataset(Dataset):
         return len(self.feat_1)
 
     def __getitem__(self, idx):
-        return [self.feat_1[idx], self.feat_2[idx]], self.target[idx]
+        return [self.feat_1[idx], self.feat_2[idx]], self.target[idx].type(torch.int64)
 
 
 def create_set(n, list_center):

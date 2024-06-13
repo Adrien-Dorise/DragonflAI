@@ -11,6 +11,19 @@ from data import create_loaders, Paradigm
 
 
 def practice_experiment(ML_model, model_type, train_set, test_set):
+	"""Perform an experiment. The experiment can be a classification, clustering or regression
+	An experiment consist on:
+		- Create the experiment object
+		- Detail the model used
+		- Train the model
+		- Visualise the results
+
+	Args:
+		ML_model (MachineLearning object): ML model used in the experiment
+		model_type (Model_Type enum): Set the paradigm of the experiment. The list can be found in the experiment file.
+		train_set (DataLoader): Train DataLoader
+		test_set (DataLoader): Test DataLoader
+	"""
 	experiment = Experiment( 
 				model = ML_model,
 				train_set = train_set, 

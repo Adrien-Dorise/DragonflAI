@@ -24,7 +24,7 @@ class Classification_Models(Enum):
     GBOOST = 7
 
 class Classification(MachineLearning):   
-    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1, verbose=False,
+    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1, verbose=False, save_path="./results/tmp/",
                  SGD_param = ['squared_error', 'l1',0.0001,'optimal'], # loss, penalty, alpha, learning_rate
                  SVM_param = ["rbf",1,0.0,'auto'], # kernel, C, coef0, gamma
                  KNN_param = [3,1], #n_neighbors, p
@@ -43,7 +43,7 @@ class Classification(MachineLearning):
             verbose (bool): Put to true to print details during training. Default to False.
             *args: Parameters of each specific algorithm
         """
-        MachineLearning.__init__(self, model, loss_metric, output_size)
+        MachineLearning.__init__(self, model, loss_metric, output_size, save_path)
 
         if model == Classification_Models.SGD: #Stochastic Gradient Descent
             for i in range(self.output_size):

@@ -6,14 +6,9 @@
 '''
 
 from experiment import *
-
-# set data path or use online dataset 
-# here we use MNIST dataset online 
-from torchvision import datasets
-from torchvision import transforms
 import torch.nn as nn
 
-from dragonflai.model.utils import * 
+from dragonflai.utils.utils_model import * 
 import NN as NN 
 import dataloader  
 
