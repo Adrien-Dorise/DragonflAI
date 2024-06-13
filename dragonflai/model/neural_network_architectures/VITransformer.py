@@ -1,5 +1,13 @@
+"""
+This is DragonflAI example on a Transformer neural network architecture
+Last Update by Edouard Villain - June 2024
+
+Author: Edouard Villain, Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
+Created: May 2024
+""" 
+
 from dragonflai.model.neuralNetwork import NeuralNetwork
-from dragonflai.model.utils import *
+from dragonflai.utils.utils_model import *
 import torch
 import torch.nn as nn
 
@@ -126,8 +134,9 @@ class VIT_MNIST(NeuralNetwork):
                  n_channels, embed_dim, 
                  n_layers, n_attention_heads, 
                  forward_mul, image_size, 
-                 patch_size, n_classes):
-        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.CLASSIFICATION)
+                 patch_size, n_classes,
+                 save_path="./results/tmp/"):
+        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.CLASSIFICATION, save_path=save_path)
         
         self.architecture = VisionTransformer(n_channels, embed_dim, 
                                                 n_layers, n_attention_heads, 

@@ -1,3 +1,13 @@
+"""
+ Data set creation for the machine learning "blob" example.
+ In this script, the blobs are created in reproductible manne by setting the seed.
+ The data loader creation is also taken care in this script.
+ Author: Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
+ Created: May 2024 
+ Last updated: Adrien Dorise - May 2024
+"""
+
+
 import numpy as np
 import matplotlib.pylab as plt 
 import torch
@@ -12,6 +22,12 @@ class Dataset(Dataset):
     Class used to store the dataset handled by pytorch. 
     '''
     def __init__(self, feat, target):
+        """Initialisation of the Dataset
+
+        Args:
+            feat (List): Features of the dataset
+            target (list): Targets of the dataset
+        """
         if not torch.is_tensor(feat):
             self.feat = torch.from_numpy(feat)
         else:

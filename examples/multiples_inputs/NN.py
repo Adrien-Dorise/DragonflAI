@@ -1,5 +1,5 @@
 from dragonflai.model.neuralNetwork import NeuralNetwork
-from dragonflai.model.utils import *
+from dragonflai.utils.utils_model import *
 
 import torch.nn as nn
 import torch.optim

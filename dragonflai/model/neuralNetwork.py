@@ -18,8 +18,6 @@ The package works as follow:
 """
 
 from os.path import exists
-from torchinfo import summary
-from torchview import draw_graph
 import torchviz 
 
 import torch.nn as nn
@@ -28,8 +26,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time 
 
-from dragonflai.model.utils import *
-
+from dragonflai.utils.utils_model import *
+from dragonflai.utils.utils_path import create_file_path
 
 class NeuralNetwork(nn.Module):
     """Main Pytorch neural network class. 
@@ -43,16 +41,16 @@ class NeuralNetwork(nn.Module):
            
     Use example:
         model = nnSubclass(input_size)
-        model.printArchitecture((1,input_size))
+        model.print_architecture((1,input_size))
         model.fit(trainset, epoch)
         score = model.predict(testset)
         print(f"Test loss: {score}")
     """
     
-    def __init__(self, modelType, taskType, name='NeuralNetwork'):
+    def __init__(self, modelType, taskType, name='NeuralNetwork', save_path="./results/tmp/"):
         super().__init__()
         self.use_gpu = torch.cuda.is_available()
-        self.save_path   = './results'
+        self.save_path   = save_path
         self.history     = dragonflAI_History(modelType, taskType)
         self.progressBar = dragonflAI_ProgressBar(self.history)
         #If available -> work on GPU
@@ -64,6 +62,10 @@ class NeuralNetwork(nn.Module):
         
         
     def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, **kwargs):
+        # Check if save folder exists
+        if not exists(self.save_path):
+            os.makedirs(self.save_path)
+
         for _, sample in enumerate(train_loader):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
@@ -89,7 +91,7 @@ class NeuralNetwork(nn.Module):
         except:
             pass 
             
-        self.printArchitecture(self.input_shape)
+        self.print_architecture(self.input_shape)
         
         self.init_results(train_loader, test_loader, batch_size, epochs)
         print('Training model {} during {} epochs with batch size set to {} on {} training data and validating on {} data'
@@ -123,28 +125,45 @@ class NeuralNetwork(nn.Module):
     def update_scheduler(self, *args, **kwargs):
         '''update scheduler'''
         loss = kwargs['loss']
-        if(self.scheduler[0] is not None):
-            for scheduler in self.scheduler:
-                scheduler.step(loss)
+        for scheduler in self.scheduler:
+            scheduler.step(loss)
 
     def get_batch(self, *args, **kwargs):
         '''get batch : return a batch from loader containing input and target 
         input can be multimodal if your loader return [input_0, ... input_n], Y'''
         sample = kwargs['sample']
+
+        available_floats = [torch.float, torch.float16, torch.float32, torch.float64, torch.double, torch.half]
         
         if isinstance(sample[0], list):
+            if(sample[0][0].dtype in available_floats):
+                input_dtype = torch.float32
+            else:
+                input_dtype = torch.int64
             inputs = ()
             for i in range(len(sample[0])): 
-                inputs += (sample[0][i].to(self.device, dtype=torch.float32),)
+                inputs += (sample[0][i].to(self.device, dtype=input_dtype),)
         else:
-            inputs = sample[0].to(self.device, dtype=torch.float32)
+            if(sample[0].dtype in available_floats):
+                input_dtype = torch.float32
+            else:
+                input_dtype = torch.int64
+            inputs = sample[0].to(self.device, dtype=input_dtype)
             
         if isinstance(sample[1], list):
+            if(sample[1][0].dtype in available_floats):
+                target_dtype = torch.float32
+            else:
+                target_dtype = torch.int64
             targets = ()
             for i in range(len(sample[1])): 
-                targets += (sample[1][i].type(torch.LongTensor).to(self.device),)
+                targets += (sample[1][i].type(target_dtype).to(self.device),)
         else:
-            targets = sample[1].type(torch.LongTensor).to(self.device)
+            if(sample[1].dtype in available_floats):
+                target_dtype = torch.float32
+            else:
+                target_dtype = torch.int64
+            targets = sample[1].type(target_dtype).to(self.device)
             
             
         return inputs, targets
@@ -153,11 +172,12 @@ class NeuralNetwork(nn.Module):
         '''compute loss'''
         # get with_grad parameter 
         with_grad=kwargs['with_grad']
-        # forward pass with gradient computing 
         if with_grad:
+            # forward pass with gradient computing 
             outputs = self.forward(inputs)
             loss    = crit(outputs, target)
-        else: # forward pass without gradient 
+        else: 
+            # forward pass without gradient 
             with torch.no_grad():
                 outputs = self.forward(inputs)
                 loss    = crit(outputs, target)
@@ -191,27 +211,24 @@ class NeuralNetwork(nn.Module):
         for opt in self.opt:
             opt.zero_grad()
 
-    def save_epoch_end(self, *args, **kwargs):   
+    def save_epoch_end(self, *args, **kwargs):
         if self.history.current_status['current_epoch'] % 100 == 0: #Save model every X epochs
-            self.saveModel(f"{self.save_path}/epoch{self.history.current_status['current_epoch']}")
+            self.save_model(f"{self.save_path}epoch{self.history.current_status['current_epoch']}")
             
         try:  
             if self.history.loss_train[-1] == np.min(self.history.loss_train):
-                self.saveModel("{}/{}_best_train".format(self.save_path, self.model_name))
+                self.save_model("{}{}_best_train".format(self.save_path, self.model_name))
             if self.history.loss_val[-1] == np.min(self.history.loss_val):
-                self.saveModel("{}/{}_best_val".format(self.save_path, self.model_name))
+                self.save_model("{}{}_best_val".format(self.save_path, self.model_name))
         except:
             pass 
         
     
-    def fit(self, train_set, epochs, 
-            criterion       = nn.L1Loss(),
-            optimizer       = torch.optim.Adam,
-            learning_rate   = 0.001,
-            weight_decay    = None,
+    def fit(self, 
+            train_set, 
             valid_set       = None,
-            loss_indicators = 1,
-            batch_size      = 2
+            epochs          = 20, 
+            criterion       = nn.L1Loss(),
             ):
         """Train a model on a training set
         print(f"Pytorch is setup on: {self.device}")
@@ -219,12 +236,9 @@ class NeuralNetwork(nn.Module):
         
         Args:
             train_set (torch.utils.data.DataLoader): Training set used to fit the model. This variable contains batch size information + features + target 
-            epochs (int): Amount of epochs to perform during training
+            valid_set (torch.utils.data.DataLoader): Validation set used toverify overfitting when training the model. This variable contains batch size information + features + target 
+            epochs (int): Amount of epochs to perform during training. Default is 20
             criterion (torch.nn): Criterion used during training for loss calculation (default = L1Loss() - see: https://pytorch.org/docs/stable/nn.html#loss-functions) 
-            optimizer (torch.optim): Optimizer used during training for backpropagation (default = Adam - see: https://pytorch.org/docs/stable/optim.html#torch.optim.Optimizer)
-            learning_rate: learning_rate used during backpropagation (default = 0.001)
-            valid_set (torch.utils.data.DataLoader): Validation set used to verify model learning. Not mandatory (default = None)
-            loss_indicators (int): Number of loss indicators used during training. Most NN only need one indicator, but distillation models need three (loss, loss_trainer, loss_student). (default = 1)
         """
         # training starting callback 
         self._on_training_start()
@@ -244,7 +258,7 @@ class NeuralNetwork(nn.Module):
                                                 lr=self.opt[0].param_groups[0]['lr'], 
                                                 acc=self.acc)
             # predict on validation set 
-            val_loss, _, _ = self.predict(valid_set, crit=criterion)
+            val_loss, _, _ = self.predict(valid_set, criterion=criterion)
             # update sheduler on validation set 
             self.update_scheduler(loss=val_loss)
             # ending epoch callback 
@@ -255,7 +269,7 @@ class NeuralNetwork(nn.Module):
         return self.history
 
 
-    def predict(self, test_set, crit=nn.L1Loss()):
+    def predict(self, test_set, criterion=nn.L1Loss()):
         """Use the trained model to predict a target values on a test set
         
         For now, we assume that the target value is known, so it is possible to calculate an error value.
@@ -282,7 +296,7 @@ class NeuralNetwork(nn.Module):
             # get batch 
             input, target = self.get_batch(sample=sample)
             # forward batch without training 
-            _, _ = self.forward_batch(input, target, crit, train=False)
+            _, _ = self.forward_batch(input, target, criterion, train=False)
         # predict ending callback 
         self._on_predict_end()
         
@@ -350,7 +364,7 @@ class NeuralNetwork(nn.Module):
         return self.architecture(data)
         
         
-    def saveModel(self, path, epoch=None):
+    def save_model(self, path):
         """Save the model state in a json file
         
         If the folder specified does not exist, an error is sent
@@ -358,15 +372,11 @@ class NeuralNetwork(nn.Module):
 
         Args:
             path (string): file path without the extension
-            epoch (int | None): completed training epoch
         """
 
         #Check if folder exists
-        file_name = path.split("/")[-1]
-        folder_path = path[0:-len(file_name)]
-        if not exists(folder_path):
-            os.makedirs(folder_path)
-        
+        create_file_path(path)
+
         #Check if file exists
         iterator = 1
         while(exists(path + str(iterator) + ".json")):
@@ -375,7 +385,7 @@ class NeuralNetwork(nn.Module):
         torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
         
         
-    def loadModel(self, path):    
+    def load_model(self, path):    
         """Load a model from a file
 
         Args:
@@ -389,36 +399,44 @@ class NeuralNetwork(nn.Module):
             raise Exception(f"Error when loading Neural Network model: {path} not found")
         
 
-    def plot_learning_curve(self, train, val, name):
+    def plot_learning_curve(self, loss_train, loss_val, path):
         """Plot the loss after training and save it in folder.
 
         Args:
-            loss_train (list of list): loss values collected on train set
+            loss_train (list): loss values collected on train set
             loss_val (list): loss values collected on validation set
+            path (str): File name including all path without the extension (example: my/folder/my_file)
         """
         fig = plt.figure()
-        plt.plot(train, color='blue')
-        plt.plot(val, color='red')
+        plt.plot(loss_train, color='blue')
+        plt.plot(loss_val, color='red')
 
         plt.legend(["Training", "Validation"])
 
         plt.xlabel('epoch')
-        plt.ylabel(name)
+        plt.ylabel("loss")
 
         plt.grid(True)
         
-        # displaying the title
-        plt.title("{} training".format(name))
+        # Check if folder exists
+        create_file_path(path)
+
+        # Displaying the title
+        plt.title("Loss evolution during neural network training")
+
+        # Display / saving
         #plt.show()
-        fig.savefig("{}/{}_history.png".format(self.save_path, name))
+        fig.savefig("{}.png".format(path))
+        plt.close()
         
         
-    def plot_learning_rate(self, lr, name):
+    def plot_learning_rate(self, lr, path):
         """Plot the loss after training and save it in folder.
 
         Args:
-            loss_train (list of list): loss values collected on train set
+            loss_train (list): learning rate values during trainnig
             loss_val (list): loss values collected on validation set
+            path (str): File name including all path without the extension (example: my/folder/my_file)
         """
         fig = plt.figure()
         plt.plot(lr, color='blue')
@@ -426,16 +444,23 @@ class NeuralNetwork(nn.Module):
         plt.legend(["Learning rate"])
 
         plt.xlabel('epoch')
-        plt.ylabel(name)
+        plt.ylabel("learning rate")
 
         plt.grid(True)
         
-        # displaying the title
-        plt.title("{} training".format(name))
+
+        # Check if folder exists
+        create_file_path(path)
+
+        # Displaying the title
+        plt.title("Learning rate evolution during neural network training")
+
+        # Display / saving
         #plt.show()
-        fig.savefig("{}/{}_history.png".format(self.save_path, name))
+        fig.savefig("{}.png".format(path))
+        plt.close()
         
-    def printArchitecture(self, input_shape):
+    def print_architecture(self, input_shape):
         """Display neural network architecture
         
         Note that the output size of each layer depends on the input shape given to the model (helps to get a good understansing in case of convolution layers)
@@ -455,7 +480,11 @@ class NeuralNetwork(nn.Module):
         
     ########### Callback methods        
     def _update_acc(self, output, target, val=False):
-        classifications     = torch.argmax(output, dim=1)
+        classifications = torch.argmax(output, dim=1)
+        if(len(target.shape) > 1):
+            if(target.shape[1] > 1):
+                # One hot encoded classification case
+                target = torch.argmax(target, dim=1)
         correct_predictions = sum(classifications==target).item()
         if val:
             self.total_correct_val   += correct_predictions

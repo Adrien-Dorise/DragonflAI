@@ -1,5 +1,14 @@
+"""
+This is DragonflAI example on a Unet neural network architecture
+Last Update by Edouard Villain - June 2024
+
+Author: Edouard Villain, Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
+Created: May 2024
+"""
+
+
 from dragonflai.model.neuralNetwork import NeuralNetwork
-from dragonflai.model.utils import *
+from dragonflai.utils.utils_model import *
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -133,7 +142,7 @@ class OutConv(nn.Module):
 
 class UNetModel(nn.Module):
     """Class for UNet model creation"""
-    def __init__(self, n_channels, n_classes, bilinear=False):
+    def __init__(self, n_channels, n_classes, bilinear=False, ):
         """Initialize the UNet Model
 
         Args:
@@ -180,14 +189,14 @@ class UNetModel(nn.Module):
         return logits
 
 class UNet_PET(NeuralNetwork):
-    """UNet Class used in exemple inheriting form NeuralNetwork class"""
-    def __init__(self, n_channels, n_classes):
+    """UNet Class used in exemple inheriting from the NeuralNetwork class"""
+    def __init__(self, n_channels, n_classes, save_path="./results/tmp/"):
         """Initialize UNet_PET class
 
         Args:
             n_channels (int): Number of channels in the input image
             n_classes (int): Number of classes
         """
-        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION)
+        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION, save_path=save_path)
 
         self.architecture = UNetModel(n_channels, n_classes).to(self.device)

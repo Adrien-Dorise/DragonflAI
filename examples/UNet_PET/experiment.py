@@ -26,7 +26,8 @@ class Experiment():
                 kwargs        = {},
                 criterion     = torch.nn.L1Loss(),
                 nb_workers    = 0,
-                numberOfImagesToDisplay = 5):
+                numberOfImagesToDisplay = 5,
+                save_path = './examples/UNet_PET/results/'):
         # Model parameters
         self.model                   = model
         self.num_epoch               = num_epoch
@@ -42,6 +43,9 @@ class Experiment():
         self.test_loader             = test_loader
         self.numberOfImagesToDisplay = numberOfImagesToDisplay
 
+        # Path parameter
+        self.save_path = save_path
+
     def fit(self):
         """Train the model using the data available in the train and validation folder path.
         """
@@ -51,17 +55,13 @@ class Experiment():
                             self.batch_size, self.num_epoch, **self.kwargs)
         
         history = self.model.fit(self.train_loader,
-        self.num_epoch, 
-        criterion=self.criterion, 
-        optimizer=self.optimizer,
-        learning_rate=self.learning_rate,
-        weight_decay=self.weight_decay, 
         valid_set=self.test_loader,
-        loss_indicators=1, 
-        batch_size=self.batch_size)
-        self.model.plot_learning_curve(history.loss_train,history.loss_val, 'loss')
-        self.model.plot_learning_curve(history.acc_train,history.acc_val, 'accuracy')
-        self.model.plot_learning_rate(history.lr, 'lr')
+        epochs=self.num_epoch, 
+        criterion=self.criterion)
+
+        self.model.plot_learning_curve(history.loss_train,history.loss_val, f"{self.save_path}loss_history")
+        self.model.plot_learning_curve(history.acc_train,history.acc_val, f"{self.save_path}accuracy_history")
+        self.model.plot_learning_rate(history.lr, f"{self.save_path}learning_rate_history")
 
     def predict(self):          
         """Model prediction on the samples available in the test folder path

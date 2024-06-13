@@ -5,8 +5,6 @@ Created: May 2023
 Last updated: Adrien Dorise - May 2023
 
 '''
-from enum import Enum
-
 import torch 
 import pickle
 import numpy as np 

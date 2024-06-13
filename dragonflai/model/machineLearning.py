@@ -9,6 +9,7 @@ Author: Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
 Created: Feb 2023
 """
 
+from dragonflai.utils.utils_path import create_file_path
 from sklearn.model_selection import GridSearchCV
 import sklearn.metrics as metrics
 import joblib
@@ -17,24 +18,28 @@ import pandas as pd
 import os
 
 
-
     
 
 
 class MachineLearning():
-    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1):
+    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1, save_path="./results/tmp/"):
         self.metric = loss_metric
         self.choice = model
         self.output_size = output_size
         self.model = []
         self.model_name = ""
+        self.save_path = save_path
 
     def _compile(self, **kwargs):
+        # Check if save folder exists
+        if not os.path.exists(self.save_path):
+            os.makedirs(self.save_path)
+
         print('\nCompiling machine learning model {}'.format(self.choice))
         print('Output size is {}'.format(self.output_size))
 
 
-    def fit(self, train_set):
+    def fit(self, train_set, **kwargs):
         """Train a model on a training set
         
         Note that most of scikit learn models do not work with mini-batch training.
@@ -64,10 +69,10 @@ class MachineLearning():
         loss = self.metric(target,outputs)
         print(f"Training loss is: {loss}")
 
-        print('Finished Training')  
+        print('Finished Training')
         
     
-    def predict(self, test_set):
+    def predict(self, test_set, **kwargs):
         """Use the trained model to predict a target values on a test set. The target must be available to calculate score.
         If no target available, use forward method.
         
@@ -185,11 +190,7 @@ class MachineLearning():
         """
 
         #Check if folder exists
-        file_name = path.split("/")[-1]
-        folder_path = path[0:-len(file_name)]
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-
+        create_file_path(path)
 
         iter = 0
         for mod in self.model:
@@ -209,61 +210,3 @@ class MachineLearning():
                 iter+=1
         except Exception:
             raise Exception(f"Error when loading Machine Learning model: {path}_{self.choice}{iter}.sav not found")    
-
-
-
-
-if __name__ == "__main__":
-    #!!! Parameters !!!
-    from lr_ai.config.ML_config import *
-    import os
-    from lr_ai.features.tracker_toolbox import select_points
-    import lr_ai.features.preprocessing as pr
-    from lr_ai.config.ML_config import parametersModel
-
-    trainPath = r"data/split1/train/"
-    validPath = r"data/split1/val/"
-    testPath = r"data/split1/test/"
-
-    trainPath = validPath = testPath = visu_path = r"data/debug/"
-
-
-    save=True
-    trackerVersion = 1
-    doParamSearch = False
-    models = ["SVM"]
-    param = parametersModel[0]
-        
-    
-    #!!! Load data set !!!
-    train_set,scaler = pr.loader(trainPath, no_batch=True, shuffle=True)
-    val_set,scaler = pr.loader(testPath, no_batch=True, shuffle=False)
-    
-    #train_set, val_set = pr.dataSplit(features, targets, no_batch=True, split=0.8)
-    
-    
-    #for i, (inputs, targets) in enumerate(train_set):
-    #   print(f"{targets} / {inputs}")
-
-
-    
-    
-    #!!! Parameter selection !!!
-    if(doParamSearch):
-        iter = 0
-        for mod in models:
-            userModel = Regressor(mod)
-            search = userModel.gridSeach(param[iter],train_set)    
-            iter += 1
-        
-    #!!! Training !!!
-    userModel = Regressor(models[0],verbose=True)
-    userModel.fit(train_set)
-    if(save):
-        userModel.saveModel(f"models/tmp/ML_model")
-                    
-    #!!! Testing !!!
-    #userModel.loadModel(f"{savePath}debug{iter}")
-    result, out = userModel.predict(val_set)
-    print(f"Test score for <{models}> is: {result}")
-          

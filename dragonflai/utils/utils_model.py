@@ -1,6 +1,6 @@
 """
 This package references all utils neural network classes used in the application.
-Author: Adrien Dorise - Edouard Villain ({adorise, evillain}@lrtechnologies.fr) - LR Technologies
+Author: Adrien Dorise (adrien.dorise@hotmail.com), Edouard Villain (evillain@lrtechnologies.fr) - LR Technologies
 Created: April 2024
 Last updated: Edouard Villain - April 2024
 """

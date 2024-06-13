@@ -10,8 +10,8 @@ Created: May 2024
 """
 
 from dragonflai.model.machineLearning import MachineLearning
-from sklearn.linear_model import TweedieRegressor, BayesianRidge, SGDRegressor
-from sklearn import svm, neighbors, naive_bayes, tree, ensemble
+from sklearn.linear_model import BayesianRidge, SGDRegressor
+from sklearn import svm, neighbors, tree, ensemble
 import sklearn.metrics as metrics
 from enum import Enum
 
@@ -29,7 +29,7 @@ class Regression_Models(Enum):
 class Regressor(MachineLearning):
     
     
-    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1, verbose=False,
+    def __init__(self, model, loss_metric=metrics.mean_absolute_error, output_size=1, verbose=False, save_path="./results/tmp/",
                  bayes_param = [1e-05,1e-05,1e-05,1e-05], 
                  SGD_param = ['squared_error', 'l1',0.0001,'optimal'], 
                  SVM_param = ["rbf",1,0.1,0.5,'auto'], 
@@ -48,7 +48,7 @@ class Regressor(MachineLearning):
             output_size (int): Number of output to predict with the regression model. Default to 1
             *args: Parameters of each specific algorithm
         """
-        MachineLearning.__init__(self, model, loss_metric, output_size)
+        MachineLearning.__init__(self, model, loss_metric, output_size, save_path=save_path)
 
         if model == Regression_Models.BAYES_LINEAR: #Bayesian regression
             self.model_name = "bayesian_regression"

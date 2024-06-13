@@ -23,7 +23,7 @@ class Clustering_Models(Enum):
     
     
 class Clustering(MachineLearning):   
-    def __init__(self, model, loss_metric=metrics.mean_absolute_error, verbose=False, 
+    def __init__(self, model, loss_metric=metrics.mean_absolute_error, verbose=False, save_path="./results/tmp/",
                  Kmeans_param = [5, "k-means++", 300], # n_clusters, initialisation, max_iter
                  hierarchical_param = [2, "euclidean"], # n_clusters, metric  
                  DBSCAN_param = [0.5, 5, "euclidean"]): # epsilon, min_samples, metric
@@ -36,7 +36,7 @@ class Clustering(MachineLearning):
             verbose (bool): Put to true to print details during training. Default to False.
             *args: Parameters of each specific algorithm
         """
-        MachineLearning.__init__(self, model, loss_metric, output_size=1)
+        MachineLearning.__init__(self, model, loss_metric, output_size=1, save_path=save_path)
 
         if model == Clustering_Models.KMEANS: #K-Means
                 self.model_name = "KMeans_clustering"
