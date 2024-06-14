@@ -25,6 +25,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import time 
+import json 
 
 from dragonflai.utils.utils_model import *
 from dragonflai.utils.utils_path import create_file_path
@@ -213,13 +214,13 @@ class NeuralNetwork(nn.Module):
 
     def save_epoch_end(self, *args, **kwargs):
         if self.history.current_status['current_epoch'] % 100 == 0: #Save model every X epochs
-            self.save_model(f"{self.save_path}epoch{self.history.current_status['current_epoch']}")
+            self.save_model(f"{self.save_path}/epoch{self.history.current_status['current_epoch']}")
             
         try:  
             if self.history.loss_train[-1] == np.min(self.history.loss_train):
-                self.save_model("{}{}_best_train".format(self.save_path, self.model_name))
+                self.save_model("{}/{}_best_train".format(self.save_path, self.model_name))
             if self.history.loss_val[-1] == np.min(self.history.loss_val):
-                self.save_model("{}{}_best_val".format(self.save_path, self.model_name))
+                self.save_model("{}/{}_best_val".format(self.save_path, self.model_name))
         except:
             pass 
         
@@ -478,7 +479,23 @@ class NeuralNetwork(nn.Module):
         
         
         
-    ########### Callback methods        
+    ########### Callback methods      
+    def _save_end_results(self):
+        if self.history.taskType == taskType.CLASSIFICATION:
+            row = {'acc_train': self.history.acc_train[-1], 
+                        'acc_val': self.history.acc_val[-1]}
+        else:            
+            row = {'acc_train': 0.0, 'acc_val': 0.0}
+            
+        row['loss_train'] = self.history.loss_train[-1]
+        row['loss_val'] = self.history.loss_val[-1]
+
+        json_object = json.dumps(row)
+        
+        # Writing to sample.json
+        with open(self.save_path + '/end_train_results.json', 'w') as outfile:
+            outfile.write(json_object)
+        
     def _update_acc(self, output, target, val=False):
         classifications = torch.argmax(output, dim=1)
         if(len(target.shape) > 1):
@@ -550,3 +567,4 @@ class NeuralNetwork(nn.Module):
     def _on_training_end(self, *args, **kwargs):
         '''callback function, called at training end'''
         print('\tEnd training...')
+        self._save_end_results()

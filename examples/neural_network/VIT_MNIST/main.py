@@ -52,7 +52,7 @@ if __name__ == "__main__":
                                         transforms.Normalize([0.5], [0.5])])
     
     # set your base path 
-    base_path = './examples/VIT_MNIST/'
+    base_path = './examples/neural_network/VIT_MNIST/'
     # get data 
     train = datasets.MNIST(base_path + 'data', train=True, download=True, transform=transform)
     test = datasets.MNIST(base_path + 'data', train=False, download=True, transform=transform)
@@ -89,6 +89,7 @@ if __name__ == "__main__":
                 kwargs=kwargs, 
                 nb_workers=nb_workers)
 
-    experiment.model.print_architecture(input_shape)
     experiment.fit()
-    experiment.visualise()
+    # disable visualise() for validation script 
+    if 0:
+        experiment.visualise()

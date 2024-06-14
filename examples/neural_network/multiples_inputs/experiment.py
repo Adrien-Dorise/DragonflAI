@@ -25,7 +25,7 @@ class Experiment():
                 kwargs        = {},
                 criterion     = torch.nn.L1Loss(),
                 nb_workers    = 0, 
-                save_path = './examples/multiples_inputs/results/'):
+                save_path = './examples/neural_network/multiples_inputs/results/'):
         #Model parameters  
         self.model         = model
         self.num_epoch     = num_epoch

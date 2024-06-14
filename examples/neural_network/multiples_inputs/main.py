@@ -28,7 +28,7 @@ if __name__ == "__main__":
     kwargs_scheduler = {'mode': 'min', 'factor': 0.33, 'patience': 1}
     kwargs           = {'kwargs_scheduler': kwargs_scheduler}
 
-    main_path  = r"examples/multiples_inputs/data/"
+    main_path  = r"examples/neural_network/multiples_inputs/data/"
 
     train = dataloader.Dataset(dataloader.blob_1, dataloader.blob_2, dataloader.classif)
     test  = dataloader.Dataset(dataloader.blob_1_t, dataloader.blob_2_t, dataloader.classif_t)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     NN_model = NN.multi_input_MLP(input_size_1, input_size_2)
     # set your base path 
-    base_path = './examples/multiples_inputs'
+    base_path = './examples/neural_network/multiples_inputs'
     NN_model.save_path = base_path + '/results'
 
     # create your experiment 
@@ -62,5 +62,7 @@ if __name__ == "__main__":
                 nb_workers=nb_workers)
 
     experiment.fit()
-    experiment.predict()
-    experiment.visualise()
+    # disable visualise() for validation script 
+    if 0:
+        experiment.predict()
+        experiment.visualise()
