@@ -60,7 +60,7 @@ if __name__ == "__main__":
     kwargs_scheduler = {'mode': 'min', 'factor': 0.33, 'patience': 1}
     kwargs = {'kwargs_scheduler': kwargs_scheduler}
 
-    base_path = './examples/UNet_PET/'
+    base_path = './examples/neural_network/UNet_PET/'
 
     input_shape = (batch_size, n_channels, image_size, image_size)
     
@@ -98,6 +98,7 @@ if __name__ == "__main__":
                 nb_workers=nb_workers,
                 numberOfImagesToDisplay=numberOfImagesToDisplay)
 
-    experiment.model.print_architecture(input_shape)
     experiment.fit()
-    experiment.visualise()
+    # disable visualise() for validation script 
+    if 0:
+        experiment.visualise()

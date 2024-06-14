@@ -2,7 +2,11 @@
 In this folder, you will find many use cases aimed to help you understand the best way to use DragonflAI.  
 you can use these examples as starting points for your projects.  
 
+## Validation
+A validation file is available and test the expected results of each example.
+When modifying DragonflAI, the validations must be run to verify that the new code does not break the package.  
 
+## Examples
 Here are the currently available examples:
 ## Machine Learning
 ### blob

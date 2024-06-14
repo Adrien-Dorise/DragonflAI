@@ -190,7 +190,10 @@ class dragonflAI_ProgressBar():
     def plot_log(self, *args, **kwargs):
         '''plot log during training'''
         if self.history.verbosity > 0:
-            column, _ = os.get_terminal_size()
+            try:
+                column, _ = os.get_terminal_size()
+            except:
+                column = 175 
             verbose = self.history.verbosity
             
             if self.history.current_status['current_batch_val'] == \
@@ -216,7 +219,8 @@ class dragonflAI_ProgressBar():
             
             if verbose == 2:
                 end = '\n'
-            if self.history.taskType in [taskType.REGRESSION, taskType.SEGMENTATION]:
-                self.print_loss(lr, size_bar, current, est_t, end)
-            if self.history.taskType == taskType.CLASSIFICATION:
-                self.print_acc(lr, size_bar, current, est_t, end)
+            if (verbose == 2 and self.history.verbosity == 3) or self.history.verbosity in [1, 2]:
+                if self.history.taskType in [taskType.REGRESSION, taskType.SEGMENTATION]:
+                    self.print_loss(lr, size_bar, current, est_t, end)
+                if self.history.taskType == taskType.CLASSIFICATION:
+                    self.print_acc(lr, size_bar, current, est_t, end)
