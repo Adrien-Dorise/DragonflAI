@@ -6,6 +6,7 @@ Last updated: Adrien Dorise - Avril 2024
 
 '''
 import cv2
+import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -13,6 +14,45 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import torch
 from torch import nn
 
+int_to_category = {
+    0: 'abyssinian',
+    1: 'american_bulldog',
+    2: 'american_pit_bull_terrier',
+    3:  'basset_hound',
+    4:  'beagle',
+    5:  'bengal',
+    6:  'birman',
+    7:  'bombay',
+    8:  'boxer',
+    9: 'british_shorthair',
+    10: 'chihuahua',
+    11: 'egyptian_mau',
+    12: 'english_cocker_spaniel',
+    13: 'english_setter',
+    14: 'german_shorthaired',
+    15: 'great_pyrenees',
+    16: 'havanese',
+    17: 'japanese_chin',
+    18: 'keeshond',
+    19: 'leonberger',
+    20: 'maine_coon',
+    21: 'miniature_pinscher',
+    22: 'newfoundland',
+    23: 'persian',
+    24: 'pomeranian',
+    25: 'pug',
+    26: 'ragdoll',
+    27: 'russian_blue',
+    28: 'saint_bernard',
+    29: 'samoyed',
+    30: 'scottish_terrier',
+    31: 'shiba_inu',
+    32: 'siamese',
+    33: 'sphynx',
+    34: 'staffordshire_bull_terrier',
+    35: 'wheaten_terrier',
+    36: 'yorkshire_terrier'
+}
 
 class Experiment():
     def __init__(self, model,
@@ -73,14 +113,25 @@ class Experiment():
         """Visualisation of the first picture of the test set.
         The input + predicted images are both shown.
         """
-        self.numberImagesToDisplay = 3
+        self.confusionmatrixCreator()
+        self.numberImagesToDisplay = 1
         self.model.history.verbosity = 0
-        _, output, (input, target) = self.model.predict(self.test_loader,self.criterion)
+        _, output, (input, target) = self.model.predict(itertools.islice(self.test_loader, self.numberImagesToDisplay) ,self.criterion)
 
-        pred = nn.Softmax(dim=1)(torch.from_numpy(output))
-        pred_labels = pred.argmax(dim=1)
-        pred_labels = pred_labels.unsqueeze(1)
-        prediction = pred_labels.to(torch.float)
+        seg_gt, class_gt = target[1], target[0]
+
+        seg_prediction = [] # Preparation of segmentation prediction
+
+        for i in range(len(output[0])):
+            pred_seg = nn.Softmax(dim=0)(torch.from_numpy(output[0][i])).argmax(dim=0).to(torch.float)
+            seg_prediction.append(pred_seg)
+
+        label_prediction = [] # Preparation of label prediction
+
+        for i in range(len(output[1])):
+            pred_label = nn.Softmax(dim=0)(torch.from_numpy(output[1][i])).argmax(dim=0).to(torch.float)
+            label_prediction.append(pred_label)
+
 
         all_imgs = []
         # Fetch test data
@@ -88,7 +139,13 @@ class Experiment():
             img, _ = batch
             all_imgs.extend(img)
 
-        for _, (inp, targ, predic) in enumerate(zip(all_imgs[:self.numberImagesToDisplay], target[:self.numberImagesToDisplay], prediction[:self.numberImagesToDisplay])):
+        target = target.transpose(1,0)
+        for _, (inp, targ, seg_predic, label_predic) in \
+            enumerate(zip(all_imgs[:self.numberImagesToDisplay], \
+                        target[:self.numberImagesToDisplay], \
+                        seg_prediction[:self.numberImagesToDisplay], \
+                        label_prediction[:self.numberImagesToDisplay])):
+
             _, axes = plt.subplots(1, 3)
 
             def convert_tensor2opencv(image):
@@ -100,8 +157,8 @@ class Experiment():
 
             inp_cv = cv2.cvtColor(np.transpose((inp.numpy()*255).astype(np.uint8), (1,2,0)), cv2.COLOR_RGB2BGR)
 
-            targ_cv = cv2.applyColorMap(convert_tensor2opencv(targ), cv2.COLORMAP_JET)
-            predic_cv = cv2.applyColorMap(convert_tensor2opencv(predic), cv2.COLORMAP_JET)
+            targ_cv = cv2.applyColorMap(convert_tensor2opencv(targ[1]), cv2.COLORMAP_JET)
+            predic_cv = cv2.applyColorMap(convert_tensor2opencv(seg_predic), cv2.COLORMAP_JET)
 
             overlay_targ = cv2.addWeighted(inp_cv, 0.5, targ_cv, 0.5, 0)  # Adjust the weights as needed
             overlay_pred = cv2.addWeighted(inp_cv, 0.5, predic_cv, 0.5, 0)
@@ -111,14 +168,33 @@ class Experiment():
             axes[0].axis('off')
 
             axes[1].imshow(cv2.cvtColor(overlay_targ, cv2.COLOR_BGR2RGB))
-            axes[1].set_title('RGB Image + Target')
+            axes[1].set_title(f'RGB Image + Target: {int_to_category.get(targ[0])}')
             axes[1].axis('off')
 
             axes[2].imshow(cv2.cvtColor(overlay_pred, cv2.COLOR_BGR2RGB))
-            axes[2].set_title('RGB Image + Prediction')
+            axes[2].set_title(f'RGB Image + Prediction : {int_to_category.get(int(label_predic))}')
             axes[2].axis('off')
 
             plt.show()
+
+
+    def confusionmatrixCreator(self):
+        self.model.eval()
+        all_preds = []
+        all_labels = []
+
+        _, output, (input, target) = self.model.predict(self.test_loader, self.criterion)
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+        label_prediction = [] # Preparation of label prediction
+
+        for i in range(len(output[1])):
+            pred_label = int(nn.Softmax(dim=0)(torch.from_numpy(output[1][i])).argmax(dim=0).to(torch.float))
+            label_prediction.append(pred_label)
+
+        cm = confusion_matrix(target[0].astype('int'), label_prediction)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+        disp.plot().figure_.savefig('{}/CM.png'.format(self.model.save_path))
+
 
     def save(self, filename):
         """Save the whole experiment class as a pickle object.
