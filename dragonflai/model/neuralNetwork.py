@@ -334,7 +334,7 @@ class NeuralNetwork(nn.Module):
                 self.history.current_status['current_batch_train'] == 0: #Print network architecture
                 #draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
 
-                if isinstance(output, tuple):
+                if isinstance(output, tuple): # In case of multiple outputs
                     torchviz.make_dot(output[0].mean(),
                                   params=dict(self.architecture.named_parameters()),
                                   show_attrs=True, show_saved=False).render('{}/architecture'.format(self.save_path), format='png')

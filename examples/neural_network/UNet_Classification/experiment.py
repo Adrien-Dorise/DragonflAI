@@ -66,7 +66,7 @@ class Experiment():
                 kwargs        = {},
                 criterion     = torch.nn.L1Loss(),
                 nb_workers    = 0,
-                numberOfImagesToDisplay = 5):
+                numberOfImagesToDisplay = 3):
         # Model parameters
         self.model                   = model
         self.num_epoch               = num_epoch
@@ -106,7 +106,6 @@ class Experiment():
     def predict(self):          
         """Model prediction on the samples available in the test folder path
         """
-        # !!! Data loading !!!
         _, _, _ = self.model.predict(self.test_loader,self.criterion)
 
     def visualise(self):
@@ -114,11 +113,9 @@ class Experiment():
         The input + predicted images are both shown.
         """
         self.confusionmatrixCreator()
-        self.numberImagesToDisplay = 1
+        # self.numberImagesToDisplay = 1
         self.model.history.verbosity = 0
-        _, output, (input, target) = self.model.predict(itertools.islice(self.test_loader, self.numberImagesToDisplay) ,self.criterion)
-
-        seg_gt, class_gt = target[1], target[0]
+        _, output, (input, target) = self.model.predict(itertools.islice(self.test_loader, self.numberOfImagesToDisplay) ,self.criterion)
 
         seg_prediction = [] # Preparation of segmentation prediction
 
@@ -141,10 +138,10 @@ class Experiment():
 
         target = target.transpose(1,0)
         for _, (inp, targ, seg_predic, label_predic) in \
-            enumerate(zip(all_imgs[:self.numberImagesToDisplay], \
-                        target[:self.numberImagesToDisplay], \
-                        seg_prediction[:self.numberImagesToDisplay], \
-                        label_prediction[:self.numberImagesToDisplay])):
+            enumerate(zip(all_imgs[:self.numberOfImagesToDisplay], \
+                        target[:self.numberOfImagesToDisplay], \
+                        seg_prediction[:self.numberOfImagesToDisplay], \
+                        label_prediction[:self.numberOfImagesToDisplay])):
 
             _, axes = plt.subplots(1, 3)
 
@@ -179,12 +176,8 @@ class Experiment():
 
 
     def confusionmatrixCreator(self):
-        self.model.eval()
-        all_preds = []
-        all_labels = []
-
         _, output, (input, target) = self.model.predict(self.test_loader, self.criterion)
-        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
         label_prediction = [] # Preparation of label prediction
 
         for i in range(len(output[1])):

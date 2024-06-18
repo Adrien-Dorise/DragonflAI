@@ -43,13 +43,29 @@ class OxfordIIITPetsAugmented(datasets.OxfordIIITPet):
         return input, [label, seg]
 
 class CustomLoss(nn.Module):
+    """Custom Loss that takes both Segmentation and Classification into account
+    """
     def __init__(self, loss4Seg = nn.CrossEntropyLoss(), loss4Classif = nn.CrossEntropyLoss()):
+        """Constructor of CustomLoss
+
+        Args:
+            loss4Seg (Pytorch Loss Function, optional): Choose the loss function you want for segmentation. Defaults to nn.CrossEntropyLoss().
+            loss4Classif (Pytorch Loss Function, optional): Choose the loss function you want for classification. Defaults to nn.CrossEntropyLoss().
+        """
         super(CustomLoss, self).__init__()
         self.loss4Seg = loss4Seg
         self.loss4Classif = loss4Classif
 
     def forward(self, outputs, targets):
+        """Forward function for CustomLoss
 
+        Args:
+            outputs (tuple): List of 2 elements with segmentation prediction ([0], size = (B, C, H, W)) and label prediction ([1], size = (B, C))
+            targets (tuple): List of 2 elements with classification groundtruth ([0], size = (B)) and segmentation groundtruth ([1], size = (B, H, W))
+
+        Returns:
+            tensor: Loss value (1D tensor)
+        """
         Lseg = self.loss4Seg(outputs[0], targets[1])
         Lclassif = self.loss4Classif(outputs[1], targets[0])
 
@@ -67,10 +83,9 @@ if __name__ == "__main__":
     lr                      = 1e-3
     wd                      = 1e-4
     optimizer               = torch.optim.Adam
-    # crit                    = nn.CrossEntropyLoss()
-    crit = CustomLoss()
+    crit                    = CustomLoss()
     scheduler               = torch.optim.lr_scheduler.ReduceLROnPlateau
-    numberOfImagesToDisplay = 5
+    numberOfImagesToDisplay = 3
 
     kwargs_optimizer = {'weight_decay': wd}
     kwargs_scheduler = {'mode': 'min', 'factor': 0.33, 'patience': 1}
