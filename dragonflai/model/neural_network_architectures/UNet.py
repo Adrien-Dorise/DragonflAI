@@ -260,6 +260,6 @@ class UNet_PET4Classif(NeuralNetwork):
             n_channels (int): Number of channels in the input image
             n_classes (int): Number of classes
         """
-        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION)
+        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION, save_path=save_path)
 
         self.architecture = UNetModel4Classif(n_channels, n_classes).to(self.device)

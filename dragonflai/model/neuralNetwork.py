@@ -18,14 +18,14 @@ The package works as follow:
 """
 
 from os.path import exists
-import torchviz 
+import torchviz
 
 import torch.nn as nn
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-import time 
-import json 
+import time
+import json
 
 from dragonflai.utils.utils_model import *
 from dragonflai.utils.utils_path import create_file_path
@@ -94,9 +94,9 @@ class NeuralNetwork(nn.Module):
             self.scheduler.append(scheduler(self.opt[0], **kwargs_scheduler))
         except:
             pass 
-            
+
         self.print_architecture(self.input_shape)
-        
+
         self.init_results(train_loader, test_loader, batch_size, epochs)
         print('Training model {} during {} epochs with batch size set to {} on {} training data and validating on {} data'
               .format(self.model_name, self.history.parameters['nb_max_epochs'], 
@@ -138,7 +138,7 @@ class NeuralNetwork(nn.Module):
         sample = kwargs['sample']
 
         available_floats = [torch.float, torch.float16, torch.float32, torch.float64, torch.double, torch.half]
-        
+
         if isinstance(sample[0], list):
             if(sample[0][0].dtype in available_floats):
                 input_dtype = torch.float32
@@ -168,16 +168,16 @@ class NeuralNetwork(nn.Module):
             else:
                 target_dtype = torch.int64
             targets = sample[1].type(target_dtype).to(self.device)
-            
-            
+
+
         return inputs, targets
-            
+
     def loss_calculation(self, crit, inputs, target, *args, **kwargs):
         '''compute loss'''
         # get with_grad parameter 
         with_grad=kwargs['with_grad']
         if with_grad:
-            # forward pass with gradient computing 
+            # forward pass with gradient computing
             outputs = self.forward(inputs)
             loss    = crit(outputs, target)
         else: 
@@ -218,16 +218,16 @@ class NeuralNetwork(nn.Module):
     def save_epoch_end(self, *args, **kwargs):
         if self.history.current_status['current_epoch'] % 100 == 0: #Save model every X epochs
             self.save_model(f"{self.save_path}/epoch{self.history.current_status['current_epoch']}")
-            
-        try:  
+
+        try:
             if self.history.loss_train[-1] == np.min(self.history.loss_train):
                 self.save_model("{}/{}_best_train".format(self.save_path, self.model_name))
             if self.history.loss_val[-1] == np.min(self.history.loss_val):
                 self.save_model("{}/{}_best_val".format(self.save_path, self.model_name))
         except:
-            pass 
-        
-    
+            pass
+
+
     def fit(self, 
             train_set, 
             valid_set       = None,
@@ -396,8 +396,8 @@ class NeuralNetwork(nn.Module):
         """
 
         return self.architecture(data)
-        
-        
+
+
     def save_model(self, path):
         """Save the model state in a json file
 
@@ -417,9 +417,9 @@ class NeuralNetwork(nn.Module):
             iterator+=1
 
         torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
-        
-        
-    def load_model(self, path):    
+
+
+    def load_model(self, path): 
         """Load a model from a file
 
         Args:
@@ -462,8 +462,8 @@ class NeuralNetwork(nn.Module):
         #plt.show()
         fig.savefig("{}.png".format(path))
         plt.close()
-        
-        
+
+
     def plot_learning_rate(self, lr, path):
         """Plot the loss after training and save it in folder.
 
@@ -481,7 +481,7 @@ class NeuralNetwork(nn.Module):
         plt.ylabel("learning rate")
 
         plt.grid(True)
-        
+
 
         # Check if folder exists
         create_file_path(path)
@@ -493,7 +493,7 @@ class NeuralNetwork(nn.Module):
         #plt.show()
         fig.savefig("{}.png".format(path))
         plt.close()
-        
+
     def print_architecture(self, input_shape):
         """Display neural network architecture
         
@@ -508,14 +508,12 @@ class NeuralNetwork(nn.Module):
         #summary(self, input_shape[0])
         print(self.architecture)
         print("\n")
-        
-        
-        
-        
-    ########### Callback methods      
+
+
+    ########### Callback methods
     def _save_end_results(self):
         if self.history.taskType == taskType.CLASSIFICATION:
-            row = {'acc_train': self.history.acc_train[-1], 
+            row = {'acc_train': self.history.acc_train[-1],
                         'acc_val': self.history.acc_val[-1]}
         else:            
             row = {'acc_train': 0.0, 'acc_val': 0.0}
@@ -601,3 +599,4 @@ class NeuralNetwork(nn.Module):
         '''callback function, called at training end'''
         print('\tEnd training...')
         self._save_end_results()
+
