@@ -220,7 +220,7 @@ class UNetModel4Classif(UNetModel):
         super(UNetModel4Classif, self).__init__(n_channels, n_classes, bilinear)
 
         self.classifier = nn.Sequential(nn.Flatten(),
-                                        nn.Linear(512, 256),
+                                        nn.Linear(256, 256),
                                         nn.Linear(256 // self.factor, 37))
 
     def forward(self, x):
@@ -241,7 +241,7 @@ class UNetModel4Classif(UNetModel):
         x5 = self.down4(x4)
         x6 = self.down5(x5)
 
-        label = self.classifier(x5)
+        label = self.classifier(x6)
 
         x = self.up1(x6, x5)
         x = self.up2(x, x4)
@@ -253,7 +253,7 @@ class UNetModel4Classif(UNetModel):
 
 class UNet_PET4Classif(NeuralNetwork):
     """UNet Class used in exemple inheriting form NeuralNetwork class"""
-    def __init__(self, n_channels, n_classes):
+    def __init__(self, n_channels, n_classes, save_path="./results/tmp/"):
         """Initialize UNet_PET class
 
         Args:

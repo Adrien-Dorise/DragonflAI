@@ -66,6 +66,7 @@ class Experiment():
                 kwargs        = {},
                 criterion     = torch.nn.L1Loss(),
                 nb_workers    = 0,
+                save_path = './examples/neural_network/UNet_Classification/results/',
                 numberOfImagesToDisplay = 3):
         # Model parameters
         self.model                   = model
@@ -80,6 +81,7 @@ class Experiment():
         self.nb_workers              = nb_workers
         self.train_loader            = train_loader
         self.test_loader             = test_loader
+        self.save_path               = save_path
         self.numberOfImagesToDisplay = numberOfImagesToDisplay
 
     def fit(self):
@@ -90,18 +92,13 @@ class Experiment():
                             self.optimizer, self.scheduler, 
                             self.batch_size, self.num_epoch, **self.kwargs)
         
-        history = self.model.fit(self.train_loader,
-        self.num_epoch, 
-        criterion=self.criterion, 
-        optimizer=self.optimizer,
-        learning_rate=self.learning_rate,
-        weight_decay=self.weight_decay, 
-        valid_set=self.test_loader,
-        loss_indicators=1, 
-        batch_size=self.batch_size)
-        self.model.plot_learning_curve(history.loss_train,history.loss_val, 'loss')
-        self.model.plot_learning_curve(history.acc_train,history.acc_val, 'accuracy')
-        self.model.plot_learning_rate(history.lr, 'lr')
+        history = self.model.fit(train_set=self.train_loader,
+            valid_set=self.test_loader,
+            epochs=self.num_epoch,
+            criterion=self.criterion)
+        self.model.plot_learning_curve(history.loss_train,history.loss_val, f"{self.save_path}loss_history")
+        self.model.plot_learning_curve(history.acc_train,history.acc_val, f"{self.save_path}accuracy_history")
+        self.model.plot_learning_rate(history.lr, f"{self.save_path}learning_rate_history")
 
     def predict(self):          
         """Model prediction on the samples available in the test folder path

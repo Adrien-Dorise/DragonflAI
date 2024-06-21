@@ -79,7 +79,7 @@ if __name__ == "__main__":
     n_classes               = 3
     batch_size              = 4
     nb_workers              = 0
-    num_epoch               = 10
+    num_epoch               = 30
     lr                      = 1e-3
     wd                      = 1e-4
     optimizer               = torch.optim.Adam
@@ -129,6 +129,6 @@ if __name__ == "__main__":
                 nb_workers=nb_workers,
                 numberOfImagesToDisplay=numberOfImagesToDisplay)
 
-    experiment.model.printArchitecture(input_shape)
+    experiment.model.print_architecture(input_shape)
     experiment.fit()
     experiment.visualise()
