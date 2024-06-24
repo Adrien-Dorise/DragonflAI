@@ -112,7 +112,7 @@ if __name__ == "__main__":
                                                 num_workers=nb_workers,
                                                 drop_last=False)
  
-    NN_model = UNet.UNet_PET4Classif(n_channels, n_classes)
+    NN_model = UNet.UNet_PET4Classif(n_channels, n_classes, image_size)
 
     NN_model.save_path = base_path + '/results'
     NN_model.progressBar.set_custom_cursor('▄︻デ══━一💨', '-', '⁍', ' ', '🎯')

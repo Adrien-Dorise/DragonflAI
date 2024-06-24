@@ -209,18 +209,19 @@ class UNet_PET(NeuralNetwork):
 
 class UNetModel4Classif(UNetModel):
     """Class for UNet model creation"""
-    def __init__(self, n_channels, n_classes, bilinear=False):
+    def __init__(self, n_channels, n_classes, image_size, bilinear=False):
         """Initialize the UNet Model
 
         Args:
             n_channels (int): Number of channels in the input image
             n_classes (int): Number of classes
+            image_size (int): Size of input image
             bilinear (bool, optional): If True, use bilinear upsampling, if False, use a transposed conv . Defaults to False.
         """
         super(UNetModel4Classif, self).__init__(n_channels, n_classes, bilinear)
 
         self.classifier = nn.Sequential(nn.Flatten(),
-                                        nn.Linear(256, 256),
+                                        nn.Linear((image_size*image_size) // 4, 256),
                                         nn.Linear(256 // self.factor, 37))
 
     def forward(self, x):
@@ -253,13 +254,14 @@ class UNetModel4Classif(UNetModel):
 
 class UNet_PET4Classif(NeuralNetwork):
     """UNet Class used in exemple inheriting form NeuralNetwork class"""
-    def __init__(self, n_channels, n_classes, save_path="./results/tmp/"):
+    def __init__(self, n_channels, n_classes, image_size, save_path="./results/tmp/"):
         """Initialize UNet_PET class
 
         Args:
             n_channels (int): Number of channels in the input image
             n_classes (int): Number of classes
+            image_size (int): Size of input image
         """
         super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION, save_path=save_path)
 
-        self.architecture = UNetModel4Classif(n_channels, n_classes).to(self.device)
+        self.architecture = UNetModel4Classif(n_channels, n_classes, image_size).to(self.device)
