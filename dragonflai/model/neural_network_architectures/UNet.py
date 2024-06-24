@@ -155,17 +155,20 @@ class UNetModel(nn.Module):
         self.n_classes = n_classes
         self.bilinear = bilinear
 
-        self.inc = (DoubleConvBlock(n_channels, 64))
-        self.down1 = (DownSample(64, 128))
-        self.down2 = (DownSample(128, 256))
-        self.down3 = (DownSample(256, 512))
-        factor = 2 if bilinear else 1
-        self.down4 = (DownSample(512, 1024 // factor))
-        self.up1 = (UpSample(1024, 512 // factor, bilinear))
-        self.up2 = (UpSample(512, 256 // factor, bilinear))
-        self.up3 = (UpSample(256, 128 // factor, bilinear))
-        self.up4 = (UpSample(128, 64, bilinear))
-        self.outc = (OutConv(64, n_classes))
+        self.inc = (DoubleConvBlock(n_channels, 8))
+        self.down1 = (DownSample(8, 16))
+        self.down2 = (DownSample(16, 32))
+        self.down3 = (DownSample(32, 64))
+        self.down4 = (DownSample(64, 128))
+        self.factor = 2 if bilinear else 1
+        self.down5 = (DownSample(128, 256))
+
+        self.up1 = (UpSample(256, 128 // self.factor, bilinear))
+        self.up2 = (UpSample(128, 64 // self.factor, bilinear))
+        self.up3 = (UpSample(64, 32 // self.factor, bilinear))
+        self.up4 = (UpSample(32, 16 // self.factor, bilinear))
+        self.up5 = (UpSample(16, 8, bilinear))
+        self.outc = (OutConv(8, n_classes))
 
     def forward(self, x):
         """Compute the forward pass
@@ -181,10 +184,13 @@ class UNetModel(nn.Module):
         x3 = self.down2(x2)
         x4 = self.down3(x3)
         x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
+        x6 = self.down5(x5)
+
+        x = self.up1(x6, x5)
+        x = self.up2(x, x4)
+        x = self.up3(x, x3)
+        x = self.up4(x, x2)
+        x = self.up5(x, x1)
         logits = self.outc(x)
         return logits
 
@@ -200,3 +206,62 @@ class UNet_PET(NeuralNetwork):
         super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION, save_path=save_path)
 
         self.architecture = UNetModel(n_channels, n_classes).to(self.device)
+
+class UNetModel4Classif(UNetModel):
+    """Class for UNet model creation"""
+    def __init__(self, n_channels, n_classes, image_size, bilinear=False):
+        """Initialize the UNet Model
+
+        Args:
+            n_channels (int): Number of channels in the input image
+            n_classes (int): Number of classes
+            image_size (int): Size of input image
+            bilinear (bool, optional): If True, use bilinear upsampling, if False, use a transposed conv . Defaults to False.
+        """
+        super(UNetModel4Classif, self).__init__(n_channels, n_classes, bilinear)
+
+        self.classifier = nn.Sequential(nn.Flatten(),
+                                        nn.Linear((image_size*image_size) // 4, 256),
+                                        nn.Linear(256 // self.factor, 37))
+
+    def forward(self, x):
+        """Compute the forward pass
+
+        Args:
+            x (torch.Tensor): Input tensor
+
+        Returns:
+            torch.Tensor: Output tensor of shape (N, n_classes, H, W)
+        """
+        if isinstance(input, tuple):
+            x = x[0]
+        x1 = self.inc(x)
+        x2 = self.down1(x1)
+        x3 = self.down2(x2)
+        x4 = self.down3(x3)
+        x5 = self.down4(x4)
+        x6 = self.down5(x5)
+
+        label = self.classifier(x6)
+
+        x = self.up1(x6, x5)
+        x = self.up2(x, x4)
+        x = self.up3(x, x3)
+        x = self.up4(x, x2)
+        x = self.up5(x, x1)
+        seg = self.outc(x)
+        return seg, label
+
+class UNet_PET4Classif(NeuralNetwork):
+    """UNet Class used in exemple inheriting form NeuralNetwork class"""
+    def __init__(self, n_channels, n_classes, image_size, save_path="./results/tmp/"):
+        """Initialize UNet_PET class
+
+        Args:
+            n_channels (int): Number of channels in the input image
+            n_classes (int): Number of classes
+            image_size (int): Size of input image
+        """
+        super().__init__(modelType=modelType.NEURAL_NETWORK, taskType=taskType.REGRESSION, save_path=save_path)
+
+        self.architecture = UNetModel4Classif(n_channels, n_classes, image_size).to(self.device)
