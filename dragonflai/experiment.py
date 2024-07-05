@@ -97,21 +97,22 @@ class Experiment():
             plt.close()
 
     
-    def save(self, path):
+    def save(self, filename):
         """Save the whole experiment class as a pickle object.
 
         Args:
             path (string): Path to save the experiment status
         """
-
         #Check if folder exists
-        create_file_path(path)
+        create_file_path(filename)
 
-        with open(path, 'wb') as file:
+        tmp_path = f"{filename}_tmp"        
+        with open(tmp_path, 'wb') as file:
             try:
                 pickle.dump(self, file)
             except EOFError:
                 raise Exception("Error in save experiment: Pickle was not able to save the file.")
+        os.rename(tmp_path,filename)
 
     @classmethod
     def load(self, path):

@@ -2,14 +2,16 @@
 This package references all neural network classes used in the application.
 Author: Adrien Dorise - Edouard Villain ({adorise, evillain}@lrtechnologies.fr) - LR Technologies
 Created: Avril 2024
-Last updated: Adrien Dorise - Avril 2024
+Last updated: Adrien Dorise - July 2024
 
 '''
+from dragonflai.utils.utils_path import create_file_path
+
+import os
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import torch
 from torch import nn
 
@@ -126,11 +128,16 @@ class Experiment():
         Args:
             filename (string): Path to save the experiment status
         """
-        with open(filename, 'wb') as file:
+        #Check if folder exists
+        create_file_path(filename)
+
+        tmp_path = f"{filename}_tmp"        
+        with open(tmp_path, 'wb') as file:
             try:
                 pickle.dump(self, file)
             except EOFError:
                 raise Exception("Error in save experiment: Pickle was not able to save the file.")
+        os.rename(tmp_path,filename)
 
     @classmethod
     def load(self, filename):

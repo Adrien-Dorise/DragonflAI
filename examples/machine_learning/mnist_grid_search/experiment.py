@@ -2,12 +2,14 @@
 Experiment class to train machine learning algorithm on a blob dataset.
 Author: Adrien Dorise (adrien.dorise@hotmail.com) - LR Technologies
 Created: May 2023
-Last updated: Adrien Dorise - May 2023
+Last updated: Adrien Dorise - July 20024
 
 '''
+from dragonflai.utils.utils_path import create_file_path
+
+import os
 import torch 
 import pickle
-import numpy as np 
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -60,11 +62,13 @@ class Experiment_Grid_Search():
         Args:
             filename (string): Path to save the experiment status
         """
-        with open(filename, 'wb') as file:
+        tmp_path = f"{filename}_tmp"        
+        with open(tmp_path, 'wb') as file:
             try:
                 pickle.dump(self, file)
             except EOFError:
                 raise Exception("Error in save experiment: Pickle was not able to save the file.")
+        os.rename(tmp_path,filename)
 
     @classmethod
     def load(self, filename):
@@ -140,11 +144,16 @@ class Experiment():
         Args:
             filename (string): Path to save the experiment status
         """
-        with open(filename, 'wb') as file:
+        #Check if folder exists
+        create_file_path(filename)
+
+        tmp_path = f"{filename}_tmp"        
+        with open(tmp_path, 'wb') as file:
             try:
                 pickle.dump(self, file)
             except EOFError:
                 raise Exception("Error in save experiment: Pickle was not able to save the file.")
+        os.rename(tmp_path,filename)
 
     @classmethod
     def load(self, filename):

@@ -77,6 +77,7 @@ class NeuralNetwork(nn.Module):
                 self.input_shape = inputs.shape 
             output_shape = output.shape  
             break
+        self.crit      = crit
         self.opt       = []
         self.scheduler = []
         self.scaler    = []
@@ -90,6 +91,7 @@ class NeuralNetwork(nn.Module):
             kwargs_scheduler = kwargs['kwargs_scheduler']
             self.scheduler.append(scheduler(self.opt[0], **kwargs_scheduler))
         except:
+            print("WARNING in _compile: Error when initialising the scheduler. No scheduler in use.")
             pass 
             
         self.print_architecture(self.input_shape)
@@ -229,7 +231,7 @@ class NeuralNetwork(nn.Module):
             train_set, 
             valid_set       = None,
             epochs          = 20, 
-            criterion       = nn.L1Loss(),
+            criterion       = None,
             ):
         """Train a model on a training set
         print(f"Pytorch is setup on: {self.device}")
@@ -237,10 +239,14 @@ class NeuralNetwork(nn.Module):
         
         Args:
             train_set (torch.utils.data.DataLoader): Training set used to fit the model. This variable contains batch size information + features + target 
-            valid_set (torch.utils.data.DataLoader): Validation set used toverify overfitting when training the model. This variable contains batch size information + features + target 
+            valid_set (torch.utils.data.DataLoader): Validation set used to verify overfitting when training the model. This variable contains batch size information + features + target 
             epochs (int): Amount of epochs to perform during training. Default is 20
-            criterion (torch.nn): Criterion used during training for loss calculation (default = L1Loss() - see: https://pytorch.org/docs/stable/nn.html#loss-functions) 
+            criterion (torch.nn): Criterion used during training for loss calculation. If None is given, the criterion saved during _compile is used (default = None - see: https://pytorch.org/docs/stable/nn.html#loss-functions) 
         """
+        # setting criterion
+        if criterion is None:
+            crit = self.crit
+            
         # training starting callback 
         self._on_training_start()
         
@@ -259,7 +265,10 @@ class NeuralNetwork(nn.Module):
                                                 lr=self.opt[0].param_groups[0]['lr'], 
                                                 acc=self.acc)
             # predict on validation set 
-            val_loss, _, _ = self.predict(valid_set, criterion=criterion)
+            if valid_set is not None:
+                val_loss, _, _ = self.predict(valid_set, criterion=criterion)
+            else:
+                val_loss = self.history.loss_train
             # update sheduler on validation set 
             self.update_scheduler(loss=val_loss)
             # ending epoch callback 
@@ -270,20 +279,24 @@ class NeuralNetwork(nn.Module):
         return self.history
 
 
-    def predict(self, test_set, criterion=nn.L1Loss()):
+    def predict(self, test_set, criterion=None):
         """Use the trained model to predict a target values on a test set
         
         For now, we assume that the target value is known, so it is possible to calculate an error value.
         
         Args:
             test_set (torch.utils.data.DataLoader): Data set for which the model predicts a target value. This variable contains batch size information + features + target 
-            criterion (torch.nn): Criterion used during training for loss calculation (default = L1Loss() - see: https://pytorch.org/docs/stable/nn.html#loss-functions) 
+            criterion (torch.nn): Criterion used during training for loss calculation. If None is given, the criterion saved during _compile is used (default = None - see: https://pytorch.org/docs/stable/nn.html#loss-functions) 
 
         Returns:
             mean_loss (float): the average error for all batch of data.
             output (list): Model prediction on the test set
             [inputs, targets] ([list,list]): Group of data containing the input + target of test set
         """
+        # setting criterion
+        if criterion is None:
+            crit = self.crit
+
         # predict starting callback 
         self._on_predict_start()
         # init list 
