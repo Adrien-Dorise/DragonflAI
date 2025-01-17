@@ -396,21 +396,21 @@ class NeuralNetwork(nn.Module):
         create_file_path(path)
 
         #Check if file exists
-        iterator = 1
-        while(exists(path + str(iterator) + ".json")):
-            iterator+=1
+        #iterator = 1
+        #while(exists(path + str(iterator) + ".json")):
+        #    iterator+=1
 
-        torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
+        torch.save(self.architecture.state_dict(), path + ".json")
         
         
     def load_model(self, path):    
         """Load a model from a file
 
         Args:
-            path (string): file path to load without extension
+            path (string): file path to load with json extension
         """
         try:
-            self.architecture.load_state_dict(torch.load(path + ".json", map_location=self.device))
+            self.architecture.load_state_dict(torch.load(path, map_location=self.device))
             self.architecture.to(self.device)
             print("Loaded model from disk")
         except Exception:
@@ -512,6 +512,9 @@ class NeuralNetwork(nn.Module):
         # Writing to sample.json
         with open(self.save_path + '/end_train_results.json', 'w') as outfile:
             outfile.write(json_object)
+        
+        self.save_model(f"{self.save_path}/NeuralNetwork_end_training")
+
         
     def _update_acc(self, output, target, val=False):
         classifications = torch.argmax(output, dim=1)
