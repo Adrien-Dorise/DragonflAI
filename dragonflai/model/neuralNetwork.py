@@ -2,7 +2,7 @@
 This package references all neural network classes used in the application.
 Author: Julia Cohen - Adrien Dorise (adrien.dorise@hotmail.com) - Edouard Villain (evillain@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Edouard Villain - April 2024 
+Last updated: Adrien Dorise - January 2025
 
 Pytorch is the main API used.
 It is organised as follow:
@@ -62,7 +62,7 @@ class NeuralNetwork(nn.Module):
         self.model_name =  name
         
         
-    def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, **kwargs):
+    def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, kwargs):
         # Check if save folder exists
         if not exists(self.save_path):
             os.makedirs(self.save_path)
@@ -70,12 +70,15 @@ class NeuralNetwork(nn.Module):
         for _, sample in enumerate(train_loader):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
-            _, output = self.loss_calculation(crit, inputs, targets, with_grad=False)
+            _, outputs = self.loss_calculation(crit, inputs, targets, with_grad=False)
             if isinstance(inputs, tuple):
                 self.input_shape = [inp.shape for inp in inputs]
             else:
                 self.input_shape = inputs.shape 
-            output_shape = output.shape  
+            if isinstance(outputs, tuple):
+                self.output_shape = [out.shape for out in outputs]
+            else:
+                self.output_shape = outputs.shape 
             break
         self.opt       = []
         self.scheduler = []
@@ -102,7 +105,7 @@ class NeuralNetwork(nn.Module):
                       self.history.parameters['batch_size'] * self.history.parameters['steps_per_epoch_val'],
                       ))
         print('\ninput_shape {}  ====> {} {} ====> output_shape {}\n'.format(
-            self.input_shape, self.history.modelType, self.history.taskType, output_shape
+            self.input_shape, self.history.modelType, self.history.taskType, self.output_shape
             ))
     
     
@@ -286,12 +289,18 @@ class NeuralNetwork(nn.Module):
         """
         # predict starting callback 
         self._on_predict_start()
-        # init list 
+        # init lists
         if isinstance(self.input_shape, list):
             self.inputs = [[] for i in range(len(self.input_shape))]
         else:
             self.inputs = []
-        self.outputs, self.targets, self.test_loss = [],[],[]
+        if isinstance(self.output_shape, list):
+            self.outputs = [[] for i in range(len(self.output_shape))]
+            self.targets = [[] for i in range(len(self.output_shape))]
+        else:
+            self.outputs = []
+            self.targets = []
+        self.test_loss = []
         # iterate validation set 
         for _, sample in enumerate(test_set):
             # get batch 
@@ -301,7 +310,7 @@ class NeuralNetwork(nn.Module):
         # predict ending callback 
         self._on_predict_end()
         
-        return np.mean(self.test_loss), np.asarray(self.outputs), [np.asarray(self.inputs), np.asarray(self.targets)]
+        return np.mean(self.test_loss), self.outputs, [self.inputs, self.targets]
 
 
     def forward_batch(self, input, target, crit, train):
@@ -315,7 +324,7 @@ class NeuralNetwork(nn.Module):
             if self.history.current_status['current_epoch'] == 1 and \
                 self.history.current_status['current_batch_train'] == 0: #Print network architecture
                 #draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
-                torchviz.make_dot(output.mean(), 
+                torchviz.make_dot(output, 
                                   params=dict(self.architecture.named_parameters()), 
                                   show_attrs=True, show_saved=False).render('{}/architecture'.format(self.save_path), format='png')
             # add current batch loss 
@@ -338,8 +347,16 @@ class NeuralNetwork(nn.Module):
                 self.inputs[1].extend(np.array(input[1].cpu().detach(), dtype=np.float32)) 
             else:
                 self.inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
-            self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
-            self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
+            if isinstance(target, tuple):
+                self.targets[0].extend(np.array(target[0].cpu().detach(), dtype=np.float32)) 
+                self.targets[1].extend(np.array(target[1].cpu().detach(), dtype=np.float32)) 
+            else:
+                self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            if isinstance(output, tuple):
+                self.outputs[0].extend(np.array(output[0].cpu().detach(), dtype=np.float32)) 
+                self.outputs[1].extend(np.array(output[1].cpu().detach(), dtype=np.float32)) 
+            else:
+                self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
             # update accuracy if needed 
             if self.history.taskType == taskType.CLASSIFICATION:
                 self._update_acc(output, target, val=True)

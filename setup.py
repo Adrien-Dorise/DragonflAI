@@ -1,13 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(name="dragonflai",
-      version="0.9.1",
+      version="0.9.2",
       description="Template for articial intelligence related projects.",
       author="Adrien Dorise, Edouard Villain, Julia Cohen, Boris Lenseigne",
       author_email="adrien.dorise@hotmail.com, {evillain, jcohen, blenseigne}@lrtechnologies.fr",
       url="https://gitlab.com/lr-technologies2/dragonflai",
       py_modules=["dragonflai.experiment"],
-      packages=["dragonflai.config",
+      packages=["dragonflai",
+                "dragonflai.config",
                 "dragonflai.dataset", 
                 "dragonflai.preprocess", 
                 "dragonflai.model", 
