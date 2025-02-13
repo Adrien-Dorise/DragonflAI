@@ -26,6 +26,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time 
 import json 
+from torchinfo import summary
 
 from dragonflai.utils.utils_model import *
 from dragonflai.utils.utils_path import create_file_path
@@ -71,14 +72,18 @@ class NeuralNetwork(nn.Module):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
             _, outputs = self.loss_calculation(crit, inputs, targets, with_grad=False)
-            if isinstance(inputs, tuple):
+            if isinstance(inputs, tuple) or isinstance(inputs, list):
                 self.input_shape = [inp.shape for inp in inputs]
             else:
                 self.input_shape = inputs.shape 
-            if isinstance(outputs, tuple):
+            if isinstance(outputs, tuple) or isinstance(outputs, list):
                 self.output_shape = [out.shape for out in outputs]
             else:
-                self.output_shape = outputs.shape 
+                self.output_shape = outputs.shape
+            if isinstance(targets, tuple) or isinstance(targets, list):
+                self.target_shape = [targ.shape for targ in targets]
+            else:
+                self.target_shape = targets.shape 
             break
         self.opt       = []
         self.scheduler = []
@@ -296,9 +301,11 @@ class NeuralNetwork(nn.Module):
             self.inputs = []
         if isinstance(self.output_shape, list):
             self.outputs = [[] for i in range(len(self.output_shape))]
-            self.targets = [[] for i in range(len(self.output_shape))]
         else:
             self.outputs = []
+        if isinstance(self.target_shape, list):
+            self.targets = [[] for i in range(len(self.target_shape))]
+        else:
             self.targets = []
         self.test_loss = []
         # iterate validation set 
@@ -324,7 +331,7 @@ class NeuralNetwork(nn.Module):
             if self.history.current_status['current_epoch'] == 1 and \
                 self.history.current_status['current_batch_train'] == 0: #Print network architecture
                 #draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
-                torchviz.make_dot(output, 
+                torchviz.make_dot(tuple(output), 
                                   params=dict(self.architecture.named_parameters()), 
                                   show_attrs=True, show_saved=False).render('{}/architecture'.format(self.save_path), format='png')
             # add current batch loss 
@@ -342,19 +349,19 @@ class NeuralNetwork(nn.Module):
             # add current test loss 
             self.test_loss.append(loss.item()) 
             # get input, target, ouput as array 
-            if isinstance(input, tuple):
-                self.inputs[0].extend(np.array(input[0].cpu().detach(), dtype=np.float32)) 
-                self.inputs[1].extend(np.array(input[1].cpu().detach(), dtype=np.float32)) 
+            if isinstance(input, tuple) or isinstance(input, list):
+                for i in range(len(self.inputs)):
+                    self.inputs[i].extend(np.array(input[i].cpu().detach(), dtype=np.float32)) 
             else:
                 self.inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
-            if isinstance(target, tuple):
-                self.targets[0].extend(np.array(target[0].cpu().detach(), dtype=np.float32)) 
-                self.targets[1].extend(np.array(target[1].cpu().detach(), dtype=np.float32)) 
+            if isinstance(target, tuple) or isinstance(target, list):
+                for i in range(len(self.targets)):
+                    self.targets[i].extend(np.array(target[i].cpu().detach(), dtype=np.float32)) 
             else:
                 self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
-            if isinstance(output, tuple):
-                self.outputs[0].extend(np.array(output[0].cpu().detach(), dtype=np.float32)) 
-                self.outputs[1].extend(np.array(output[1].cpu().detach(), dtype=np.float32)) 
+            if isinstance(output, tuple) or isinstance(output, list):
+                for i in range(len(self.outputs)):
+                    self.outputs[i].extend(np.array(output[i].cpu().detach(), dtype=np.float32)) 
             else:
                 self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
             # update accuracy if needed 
@@ -489,8 +496,8 @@ class NeuralNetwork(nn.Module):
         
         print("\nNeural network architecture: \n")
         print(f"Input shape: {input_shape}")
-        #summary(self, input_shape[0])
-        print(self.architecture)
+        summary(self, input_shape)
+        #print(self.architecture)
         print("\n")
         
         
