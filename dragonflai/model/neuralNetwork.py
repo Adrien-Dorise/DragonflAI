@@ -2,7 +2,7 @@
 This package references all neural network classes used in the application.
 Author: Julia Cohen - Adrien Dorise (adrien.dorise@hotmail.com) - Edouard Villain (evillain@lrtechnologies.fr) - LR Technologies
 Created: March 2023
-Last updated: Edouard Villain - April 2024 
+Last updated: Adrien Dorise - January 2025
 
 Pytorch is the main API used.
 It is organised as follow:
@@ -26,6 +26,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time 
 import json 
+from torchinfo import summary
 
 from dragonflai.utils.utils_model import *
 from dragonflai.utils.utils_path import create_file_path
@@ -62,7 +63,7 @@ class NeuralNetwork(nn.Module):
         self.model_name =  name
         
         
-    def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, **kwargs):
+    def _compile(self, train_loader, test_loader, crit, lr, opts, scheduler, batch_size, epochs, kwargs):
         # Check if save folder exists
         if not exists(self.save_path):
             os.makedirs(self.save_path)
@@ -70,12 +71,19 @@ class NeuralNetwork(nn.Module):
         for _, sample in enumerate(train_loader):
             # get batch 
             inputs, targets = self.get_batch(sample=sample)
-            _, output = self.loss_calculation(crit, inputs, targets, with_grad=False)
-            if isinstance(inputs, tuple):
+            _, outputs = self.loss_calculation(crit, inputs, targets, with_grad=False)
+            if isinstance(inputs, tuple) or isinstance(inputs, list):
                 self.input_shape = [inp.shape for inp in inputs]
             else:
                 self.input_shape = inputs.shape 
-            output_shape = output.shape  
+            if isinstance(outputs, tuple) or isinstance(outputs, list):
+                self.output_shape = [out.shape for out in outputs]
+            else:
+                self.output_shape = outputs.shape
+            if isinstance(targets, tuple) or isinstance(targets, list):
+                self.target_shape = [targ.shape for targ in targets]
+            else:
+                self.target_shape = targets.shape 
             break
         self.opt       = []
         self.scheduler = []
@@ -102,7 +110,7 @@ class NeuralNetwork(nn.Module):
                       self.history.parameters['batch_size'] * self.history.parameters['steps_per_epoch_val'],
                       ))
         print('\ninput_shape {}  ====> {} {} ====> output_shape {}\n'.format(
-            self.input_shape, self.history.modelType, self.history.taskType, output_shape
+            self.input_shape, self.history.modelType, self.history.taskType, self.output_shape
             ))
     
     
@@ -286,12 +294,20 @@ class NeuralNetwork(nn.Module):
         """
         # predict starting callback 
         self._on_predict_start()
-        # init list 
+        # init lists
         if isinstance(self.input_shape, list):
             self.inputs = [[] for i in range(len(self.input_shape))]
         else:
             self.inputs = []
-        self.outputs, self.targets, self.test_loss = [],[],[]
+        if isinstance(self.output_shape, list):
+            self.outputs = [[] for i in range(len(self.output_shape))]
+        else:
+            self.outputs = []
+        if isinstance(self.target_shape, list):
+            self.targets = [[] for i in range(len(self.target_shape))]
+        else:
+            self.targets = []
+        self.test_loss = []
         # iterate validation set 
         for _, sample in enumerate(test_set):
             # get batch 
@@ -301,7 +317,7 @@ class NeuralNetwork(nn.Module):
         # predict ending callback 
         self._on_predict_end()
         
-        return np.mean(self.test_loss), np.asarray(self.outputs), [np.asarray(self.inputs), np.asarray(self.targets)]
+        return np.mean(self.test_loss), self.outputs, [self.inputs, self.targets]
 
 
     def forward_batch(self, input, target, crit, train):
@@ -315,7 +331,7 @@ class NeuralNetwork(nn.Module):
             if self.history.current_status['current_epoch'] == 1 and \
                 self.history.current_status['current_batch_train'] == 0: #Print network architecture
                 #draw_graph(self, input_data=input, save_graph=True, directory=self.save_path, expand_nested=True, depth=5)
-                torchviz.make_dot(output.mean(), 
+                torchviz.make_dot(tuple(output), 
                                   params=dict(self.architecture.named_parameters()), 
                                   show_attrs=True, show_saved=False).render('{}/architecture'.format(self.save_path), format='png')
             # add current batch loss 
@@ -333,13 +349,21 @@ class NeuralNetwork(nn.Module):
             # add current test loss 
             self.test_loss.append(loss.item()) 
             # get input, target, ouput as array 
-            if isinstance(input, tuple):
-                self.inputs[0].extend(np.array(input[0].cpu().detach(), dtype=np.float32)) 
-                self.inputs[1].extend(np.array(input[1].cpu().detach(), dtype=np.float32)) 
+            if isinstance(input, tuple) or isinstance(input, list):
+                for i in range(len(self.inputs)):
+                    self.inputs[i].extend(np.array(input[i].cpu().detach(), dtype=np.float32)) 
             else:
                 self.inputs.extend(np.array(input.cpu().detach(), dtype=np.float32))
-            self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
-            self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
+            if isinstance(target, tuple) or isinstance(target, list):
+                for i in range(len(self.targets)):
+                    self.targets[i].extend(np.array(target[i].cpu().detach(), dtype=np.float32)) 
+            else:
+                self.targets.extend(np.array(target.cpu().detach(), dtype=np.float32))
+            if isinstance(output, tuple) or isinstance(output, list):
+                for i in range(len(self.outputs)):
+                    self.outputs[i].extend(np.array(output[i].cpu().detach(), dtype=np.float32)) 
+            else:
+                self.outputs.extend(np.array(output.cpu().detach(), dtype=np.float32))
             # update accuracy if needed 
             if self.history.taskType == taskType.CLASSIFICATION:
                 self._update_acc(output, target, val=True)
@@ -379,21 +403,21 @@ class NeuralNetwork(nn.Module):
         create_file_path(path)
 
         #Check if file exists
-        iterator = 1
-        while(exists(path + str(iterator) + ".json")):
-            iterator+=1
+        #iterator = 1
+        #while(exists(path + str(iterator) + ".json")):
+        #    iterator+=1
 
-        torch.save(self.architecture.state_dict(), path + "_" + str(iterator) + ".json")
+        torch.save(self.architecture.state_dict(), path + ".json")
         
         
     def load_model(self, path):    
         """Load a model from a file
 
         Args:
-            path (string): file path to load without extension
+            path (string): file path to load with json extension
         """
         try:
-            self.architecture.load_state_dict(torch.load(path + ".json", map_location=self.device))
+            self.architecture.load_state_dict(torch.load(path, map_location=self.device))
             self.architecture.to(self.device)
             print("Loaded model from disk")
         except Exception:
@@ -472,8 +496,8 @@ class NeuralNetwork(nn.Module):
         
         print("\nNeural network architecture: \n")
         print(f"Input shape: {input_shape}")
-        #summary(self, input_shape[0])
-        print(self.architecture)
+        summary(self, input_shape)
+        #print(self.architecture)
         print("\n")
         
         
@@ -495,6 +519,9 @@ class NeuralNetwork(nn.Module):
         # Writing to sample.json
         with open(self.save_path + '/end_train_results.json', 'w') as outfile:
             outfile.write(json_object)
+        
+        self.save_model(f"{self.save_path}/NeuralNetwork_end_training")
+
         
     def _update_acc(self, output, target, val=False):
         classifications = torch.argmax(output, dim=1)
