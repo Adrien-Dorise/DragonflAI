@@ -4,6 +4,9 @@ DragonflAI is a novel way to implement, train and test artificial intelligence m
 
 DragonflAI API is based on a main experiment class that encapsulates all tools needed to create an AI model. To use more complex models, the user can override key functions during the training, the test, or the visualisation of an AI model.
 
+<p align="center">
+  <img align="center" width="659" height="276" alt="dragonflAI image" src="https://github.com/user-attachments/assets/c45f5e9d-b5b9-4178-a980-df167d8ccc07" />
+</p>
 ---
 
 ## Features
